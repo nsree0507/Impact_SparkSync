@@ -3,14 +3,11 @@ from pydantic import BaseModel
 
 from backend.services.recommendation_service import get_recommendations
 from backend.services.offer_service import generate_offer
-from backend.services.loyalty_service import get_loyalty_status
+from backend.services.loyalty_service import calculate_loyalty_score
 from firebase.push_notification import send_push_notification
 
 
-router = APIRouter(
-    prefix="/customer",
-    tags=["Customer Services"]
-)
+router = APIRouter()
 
 
 # -------------------------------
@@ -51,11 +48,12 @@ def get_customer_offers(customer_id: str):
 def customer_loyalty(customer_id: str):
 
     try:
-        loyalty_status = get_loyalty_status(customer_id)
+        loyalty_data = calculate_loyalty_score(customer_id)
 
         return {
             "customer_id": customer_id,
-            "loyalty_status": loyalty_status
+            "score": loyalty_data["score"],
+            "level": loyalty_data["level"]
         }
 
     except Exception as e:
@@ -77,7 +75,7 @@ def send_test_notification(request: NotificationRequest):
 
         return {
             "message": "Notification sent successfully",
-            "firebase_response": response
+            "firebase_response": str(response)
         }
 
     except Exception as e:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from backend.database.mongo_connection import get_database
 
-router = APIRouter(prefix="/admin", tags=["Admin Services"])
+router = APIRouter()
 
 
 # -----------------------------------
@@ -11,7 +11,10 @@ router = APIRouter(prefix="/admin", tags=["Admin Services"])
 def get_transactions():
 
     db = get_database()
-    transactions = list(db["transactions"].find({}, {"_id": 0}))
+
+    transactions = list(
+        db["transactions"].find({}, {"_id": 0})
+    )
 
     return {
         "total_transactions": len(transactions),
@@ -26,9 +29,12 @@ def get_transactions():
 def add_transaction(transaction: dict):
 
     db = get_database()
+
     db["transactions"].insert_one(transaction)
 
-    return {"message": "Transaction added successfully"}
+    return {
+        "message": "Transaction added successfully"
+    }
 
 
 # -----------------------------------
@@ -43,7 +49,7 @@ def sales_summary():
         {
             "$group": {
                 "_id": None,
-                "total_sales": {"$sum": "$price"},
+                "total_sales": {"$sum": "$Price"},
                 "total_transactions": {"$sum": 1}
             }
         }
@@ -51,7 +57,13 @@ def sales_summary():
 
     result = list(db["transactions"].aggregate(pipeline))
 
-    return result
+    if not result:
+        return {
+            "total_sales": 0,
+            "total_transactions": 0
+        }
+
+    return result[0]
 
 
 # -----------------------------------
@@ -65,8 +77,8 @@ def top_products():
     pipeline = [
         {
             "$group": {
-                "_id": "$product",
-                "total_sold": {"$sum": "$quantity"}
+                "_id": "$Product",
+                "total_sold": {"$sum": "$Quantity"}
             }
         },
         {"$sort": {"total_sold": -1}},
@@ -89,8 +101,8 @@ def customer_segments():
     pipeline = [
         {
             "$group": {
-                "_id": "$customer_id",
-                "total_spent": {"$sum": "$price"}
+                "_id": "$Customer_ID",
+                "total_spent": {"$sum": "$Price"}
             }
         },
         {"$sort": {"total_spent": -1}}

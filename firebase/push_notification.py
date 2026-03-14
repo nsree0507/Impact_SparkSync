@@ -7,7 +7,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 
-def send_push_notification(token, title, body):
+def send_push_notification(token: str, title: str, body: str):
 
     message = messaging.Message(
         notification=messaging.Notification(

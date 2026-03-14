@@ -1,7 +1,13 @@
-from backend.database.mongo_connection import transactions_collection
+from backend.database.mongo_connection import get_database
+
+# Get database instance
+db = get_database()
+
+# Access transactions collection
+transactions_collection = db["transactions"]
 
 
-def calculate_loyalty_score(customer_id):
+def calculate_loyalty_score(customer_id: str):
     """
     Calculate loyalty score based on spending and purchases
     """
@@ -16,7 +22,7 @@ def calculate_loyalty_score(customer_id):
             "level": "New Customer"
         }
 
-    total_spending = sum(t["Price"] for t in transactions)
+    total_spending = sum(t.get("Price", 0) for t in transactions)
     purchase_count = len(transactions)
 
     score = total_spending + (purchase_count * 10)

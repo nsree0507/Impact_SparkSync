@@ -2,9 +2,7 @@ from backend.database.mongo_connection import get_database
 
 
 def check_inventory(product_name: str):
-    """
-    Check inventory level of a product
-    """
+
 
     db = get_database()
     inventory_collection = db["inventory"]

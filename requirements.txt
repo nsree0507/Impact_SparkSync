@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+pymongo
+python-dotenv
+pandas
+scikit-learn
+mlxtend
+geopy
+firebase-admin
+pytest

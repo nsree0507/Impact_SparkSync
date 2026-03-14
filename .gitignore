@@ -3,4 +3,4 @@ firebase/firebase-key.json
 __pycache__/
 *.pyc
 logs/
-.env
+.env.example

@@ -1,0 +1,2261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SparkSynch — AI Geofencing Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&family=Chillax:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════
+   ULTRA DESIGN TOKENS (for new login page)
+══════════════════════════════════════════════════════ */
+:root {
+  --bg: #f4f6fb;
+  --bg2: #eef1f8;
+  --bg3: #e8ecf5;
+  --surface: #ffffff;
+  --surface2: rgba(255,255,255,0.85);
+  --border: rgba(16,24,64,0.08);
+  --border2: rgba(16,24,64,0.14);
+  --ink: #0d1128;
+  --ink2: #1e2a52;
+  --muted: #6b7a9f;
+  --dim: #a8b3d0;
+  --blue: #3b6ef8;
+  --blue-soft: rgba(59,110,248,0.12);
+  --blue-glow: rgba(59,110,248,0.3);
+  --violet: #7c5cfc;
+  --violet-soft: rgba(124,92,252,0.1);
+  --cyan: #0abde3;
+  --cyan-soft: rgba(10,189,227,0.1);
+  --emerald: #00b894;
+  --emerald-soft: rgba(0,184,148,0.1);
+  --amber: #f39c12;
+  --amber-soft: rgba(243,156,18,0.1);
+  --rose: #e74c3c;
+  --rose-soft: rgba(231,76,60,0.1);
+  --grad-hero: linear-gradient(135deg, #3b6ef8 0%, #7c5cfc 100%);
+  --grad-card: linear-gradient(145deg, #fff 0%, #f8faff 100%);
+  --shadow-sm: 0 2px 8px rgba(16,24,80,0.06);
+  --shadow-md: 0 8px 32px rgba(16,24,80,0.10);
+  --shadow-lg: 0 20px 60px rgba(16,24,80,0.14);
+  --shadow-glow: 0 8px 40px rgba(59,110,248,0.25);
+  --radius-login: 18px;
+}
+
+/* ══════════════════════════════════════════════════════
+   NEW LOGIN PAGE STYLES (from ultra)
+══════════════════════════════════════════════════════ */
+#login-page {
+  position:fixed; inset:0; z-index:999;
+  display:flex;
+  background:var(--bg);
+  transition:opacity 0.8s cubic-bezier(0.4,0,0.2,1), transform 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+#login-page.exit {
+  opacity:0; transform:translateY(-20px) scale(1.02);
+  pointer-events:none;
+}
+#login-hero {
+  flex:1.1;
+  background:var(--grad-hero);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:56px;
+  min-height:100vh;
+}
+#hero-canvas-3d {
+  position:absolute; inset:0;
+  width:100% !important;
+  height:100% !important;
+  pointer-events:none;
+  z-index:1;
+}
+.hero-noise {
+  position:absolute; inset:0; opacity:0.04; z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.hero-grid {
+  position:absolute; inset:0; z-index:0;
+  background-image: linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size:48px 48px;
+  animation:gridDrift 24s linear infinite;
+}
+@keyframes gridDrift { to { background-position:48px 48px; } }
+.hero-orb {
+  position:absolute; border-radius:50%; z-index:0;
+  background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 70%);
+  animation:orbFloat 10s ease-in-out infinite;
+}
+@keyframes orbFloat {
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(-15px,20px) scale(1.05);}
+  66%{transform:translate(20px,-10px) scale(0.95);}
+}
+.hero-content { position:relative; z-index:3; }
+.hero-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.3);
+  backdrop-filter:blur(12px);
+  border-radius:99px; padding:6px 16px;
+  font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:#fff; margin-bottom:28px;
+}
+.hero-badge .pulse {
+  width:7px; height:7px; border-radius:50%; background:#4ade80;
+  animation:lPulse 1.6s ease infinite;
+  box-shadow:0 0 0 0 rgba(74,222,128,0.6);
+}
+@keyframes lPulse {
+  0%{box-shadow:0 0 0 0 rgba(74,222,128,0.6);}
+  70%{box-shadow:0 0 0 8px rgba(74,222,128,0);}
+  100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}
+}
+.hero-title {
+  font-family:'Chillax',sans-serif;
+  font-size:56px; font-weight:700; line-height:1.08;
+  color:#fff; margin-bottom:20px;
+  text-shadow:0 4px 40px rgba(0,0,0,0.2);
+}
+.hero-title span {
+  background:linear-gradient(90deg,#fff,rgba(255,255,255,0.7));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.hero-subtitle {
+  font-size:16px; color:rgba(255,255,255,0.72); line-height:1.7;
+  max-width:420px; margin-bottom:44px;
+}
+.hero-slides {
+  display:flex; gap:6px; align-items:center; margin-bottom:32px;
+}
+.hero-slide-dot {
+  height:4px; border-radius:2px;
+  background:rgba(255,255,255,0.35);
+  transition:all 0.4s;
+  cursor:pointer;
+}
+.hero-slide-dot.active { width:32px; background:#fff; }
+.hero-slide-dot:not(.active) { width:12px; }
+.hero-stat-cards {
+  display:flex; gap:14px;
+}
+.hero-stat-card {
+  background:rgba(255,255,255,0.15);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:16px; padding:16px 22px;
+  transition:transform 0.3s;
+}
+.hero-stat-card:hover { transform:translateY(-4px); }
+.hero-stat-num {
+  font-family:'Chillax',sans-serif;
+  font-size:30px; font-weight:700; color:#fff;
+}
+.hero-stat-lbl {
+  font-size:11px; color:rgba(255,255,255,0.65); margin-top:2px;
+}
+#login-form-panel {
+  width:480px;
+  background:var(--surface);
+  display:flex; flex-direction:column;
+  justify-content:center;
+  padding:56px 52px;
+  box-shadow:-40px 0 80px rgba(16,24,80,0.08);
+  overflow-y:auto;
+}
+.fl-logo {
+  display:flex; align-items:center; gap:12px;
+  margin-bottom:48px;
+}
+.fl-logo-icon {
+  width:46px; height:46px; border-radius:14px;
+  background:var(--grad-hero);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+  box-shadow:var(--shadow-glow);
+  position:relative; overflow:hidden;
+}
+.fl-logo-icon::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.2),transparent);
+}
+.fl-logo-name {
+  font-family:'Chillax',sans-serif;
+  font-size:20px; font-weight:700; color:var(--ink);
+}
+.fl-logo-sub { font-size:11px; color:var(--muted); }
+.fl-title { font-family:'Chillax',sans-serif; font-size:34px; font-weight:700; color:var(--ink); line-height:1.1; margin-bottom:8px; }
+.fl-subtitle { font-size:13px; color:var(--muted); margin-bottom:32px; }
+/* Role cards — 2-column grid (Manager + Customer only) */
+.role-card-wrap { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px; }
+.lp-role-card { border:2px solid var(--border2); border-radius:16px; padding:20px 14px; cursor:pointer; text-align:center; transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1); background:var(--bg); position:relative; overflow:hidden; }
+.lp-role-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-md); }
+.lp-role-card.selected { transform:translateY(-4px); }
+.lp-role-card.rc-manager.selected { border-color:var(--blue); background:var(--blue-soft); }
+.lp-role-card.rc-customer.selected { border-color:var(--emerald); background:var(--emerald-soft); }
+.role-card-icon { font-size:32px; display:block; margin-bottom:8px; transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+.lp-role-card:hover .role-card-icon, .lp-role-card.selected .role-card-icon { transform:scale(1.25) rotate(-5deg); }
+.role-card-name { font-size:14px; font-weight:800; color:var(--ink); }
+.role-card-desc { font-size:11px; color:var(--muted); margin-top:4px; }
+.role-card-check { position:absolute; top:8px; right:8px; width:18px; height:18px; border-radius:50%; background:var(--blue); display:none; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:800; }
+.lp-role-card.rc-customer .role-card-check { background:var(--emerald); }
+.lp-role-card.selected .role-card-check { display:flex; animation:checkPop 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes checkPop { from{transform:scale(0);} to{transform:scale(1);} }
+/* Form */
+.lp-form-group { margin-bottom:18px; }
+.lp-form-label {
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); display:block; margin-bottom:8px;
+}
+.lp-form-input-wrap { position:relative; }
+.lp-form-input {
+  width:100%; padding:14px 16px 14px 46px;
+  background:var(--bg);
+  border:1.5px solid var(--border2);
+  border-radius:13px; color:var(--ink);
+  font-family:'Cabinet Grotesk',sans-serif; font-size:14px;
+  outline:none; transition:all 0.25s;
+}
+.lp-form-input:focus {
+  border-color:var(--blue);
+  background:var(--surface);
+  box-shadow:0 0 0 4px rgba(59,110,248,0.1);
+}
+.lp-form-input::placeholder { color:var(--dim); }
+.lp-input-ic {
+  position:absolute; left:15px; top:50%; transform:translateY(-50%);
+  font-size:16px; opacity:0.5; pointer-events:none;
+}
+.lp-form-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.lp-form-check { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer; }
+.lp-form-check input { accent-color:var(--blue); }
+.lp-form-link { font-size:13px; color:var(--blue); cursor:pointer; font-weight:600; }
+.lp-btn-primary {
+  width:100%; padding:15px;
+  background:var(--grad-hero);
+  border:none; border-radius:13px; color:#fff;
+  font-family:'Cabinet Grotesk',sans-serif; font-size:15px; font-weight:700;
+  cursor:pointer; transition:all 0.3s; position:relative; overflow:hidden;
+  box-shadow:var(--shadow-glow);
+}
+.lp-btn-primary::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+  transform:translateX(-100%); transition:transform 0.5s;
+}
+.lp-btn-primary:hover::before { transform:translateX(100%); }
+.lp-btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 48px rgba(59,110,248,0.35); }
+.lp-btn-primary:active { transform:scale(0.98); }
+.lp-form-divider {
+  display:flex; align-items:center; gap:14px;
+  margin:22px 0; color:var(--dim); font-size:12px;
+}
+.lp-form-divider::before,.lp-form-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.lp-btn-sso {
+  width:100%; padding:13px;
+  background:var(--bg); border:1.5px solid var(--border2);
+  border-radius:13px; color:var(--ink); font-family:'Cabinet Grotesk',sans-serif; font-size:13px; font-weight:600;
+  cursor:pointer; transition:all 0.25s; display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.lp-btn-sso:hover { background:var(--bg2); border-color:var(--blue); color:var(--blue); }
+.lp-form-footer { margin-top:28px; text-align:center; font-size:12px; color:var(--muted); }
+.lp-form-footer a { color:var(--blue); cursor:pointer; font-weight:600; }
+/* Ripple */
+.lp-ripple-btn { position:relative; overflow:hidden; }
+.ripple-circle {
+  position:absolute; border-radius:50%;
+  background:rgba(255,255,255,0.3);
+  transform:scale(0);
+  animation:rippleAnim 0.6s linear;
+  pointer-events:none;
+}
+@keyframes rippleAnim { to { transform:scale(4); opacity:0; } }
+/* Role hint */
+#lp-role-hint {
+  margin-bottom:16px; padding:10px 14px; border-radius:12px;
+  background:var(--blue-soft); border:1px solid rgba(59,110,248,0.2);
+  font-size:12px; color:var(--blue); font-weight:600; transition:all 0.3s;
+}
+/* Responsive */
+@media(max-width:768px){
+  #login-hero { display:none; }
+  #login-form-panel { width:100%; padding:40px 28px; }
+  .fl-title { font-size:28px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   ROOT TOKENS
+══════════════════════════════════════════════════════ */
+:root{
+  /* Manager palette — slate/blue professional */
+  --m-bg:#f0f4ff; --m-bg2:#e8edf8; --m-surface:#fff;
+  --m-blue:#2563eb; --m-violet:#7c3aed; --m-emerald:#059669;
+  --m-amber:#d97706; --m-rose:#dc2626; --m-cyan:#0891b2;
+  --m-ink:#0f172a; --m-ink2:#1e293b; --m-muted:#64748b; --m-dim:#94a3b8;
+  --m-border:rgba(15,23,42,0.08); --m-border2:rgba(15,23,42,0.14);
+  --m-grad:linear-gradient(135deg,#2563eb,#7c3aed);
+  --m-shadow:0 4px 24px rgba(37,99,235,0.12);
+
+  /* Customer palette — midnight teal luxury */
+  --c-bg:#060d1a; --c-bg2:#0a1628; --c-surface:rgba(255,255,255,0.06);
+  --c-teal:#14b8a6; --c-gold:#f59e0b; --c-pink:#ec4899;
+  --c-violet:#8b5cf6; --c-blue:#3b82f6; --c-green:#22c55e;
+  --c-text:#f1f5f9; --c-muted:#94a3b8; --c-dim:#475569;
+  --c-border:rgba(255,255,255,0.08); --c-border2:rgba(255,255,255,0.14);
+  --c-grad:linear-gradient(135deg,#14b8a6,#3b82f6);
+  --c-grad-gold:linear-gradient(135deg,#f59e0b,#ec4899);
+  --radius:16px; --radius-sm:10px;
+  --sidebar:240px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{font-size:14px;scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;overflow:hidden;height:100vh;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:rgba(100,116,139,0.3);border-radius:99px;}
+
+/* ══════════════════════════════════════════════════════
+   SHARED UTILITIES
+══════════════════════════════════════════════════════ */
+.hidden{display:none!important;}
+.flex{display:flex;align-items:center;}
+.flex-between{display:flex;justify-content:space-between;align-items:center;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.mb12{margin-bottom:12px;} .mb16{margin-bottom:16px;} .mb20{margin-bottom:20px;}
+.gap8{gap:8px;} .gap12{gap:12px;} .gap16{gap:16px;}
+
+/* old role-screen styles removed — replaced by new login page above */
+
+/* ══════════════════════════════════════════════════════
+   MANAGER DASHBOARD SHELL
+══════════════════════════════════════════════════════ */
+#manager-app{
+  display:none;position:fixed;inset:0;
+  background:var(--m-bg);color:var(--m-ink);
+  flex-direction:row;
+}
+/* Manager Sidebar */
+#m-sidebar{
+  width:var(--sidebar);background:var(--m-surface);
+  border-right:1px solid var(--m-border);
+  display:flex;flex-direction:column;flex-shrink:0;
+  transition:width .3s cubic-bezier(.4,0,.2,1);overflow:hidden;
+  box-shadow:2px 0 20px rgba(37,99,235,0.06);
+  z-index:10;
+}
+#m-sidebar.collapsed{width:64px;}
+.m-sb-logo{display:flex;align-items:center;gap:10px;padding:20px 16px 4px;cursor:pointer;}
+.m-sb-logo-icon{width:38px;height:38px;border-radius:12px;background:var(--m-grad);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 4px 14px rgba(37,99,235,0.35);}
+.m-sb-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--m-ink);white-space:nowrap;overflow:hidden;}
+.m-sb-ver{font-size:10px;color:var(--m-muted);}
+.m-sb-search{margin:14px 10px 6px;background:var(--m-bg);border:1.5px solid var(--m-border2);border-radius:10px;display:flex;align-items:center;gap:8px;padding:8px 12px;transition:.25s;}
+.m-sb-search:focus-within{border-color:var(--m-blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.m-sb-search input{border:none;background:transparent;outline:none;font-family:'Outfit',sans-serif;font-size:12px;color:var(--m-ink);flex:1;}
+.m-sb-search input::placeholder{color:var(--m-dim);}
+.m-nav-section{padding:0 8px;margin-bottom:4px;}
+.m-nav-label{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--m-dim);padding:10px 8px 4px;}
+.m-nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;margin-bottom:2px;transition:all .2s;position:relative;white-space:nowrap;overflow:hidden;}
+.m-nav-item:hover{background:var(--m-bg);}
+.m-nav-item.active{background:rgba(37,99,235,0.1);color:var(--m-blue);}
+.m-nav-item.active::before{content:'';position:absolute;left:0;top:20%;height:60%;width:3px;background:var(--m-blue);border-radius:0 3px 3px 0;}
+.m-nav-icon{width:32px;height:32px;border-radius:9px;background:var(--m-bg2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:.25s;}
+.m-nav-item.active .m-nav-icon{background:var(--m-blue);color:#fff;box-shadow:0 4px 12px rgba(37,99,235,0.35);animation:navGlow 2.5s ease infinite;}
+@keyframes navGlow{0%,100%{box-shadow:0 4px 12px rgba(37,99,235,0.35);}50%{box-shadow:0 4px 20px rgba(37,99,235,0.6),0 0 30px rgba(124,58,237,0.2);}}
+.m-nav-label2{font-size:13px;font-weight:600;color:var(--m-ink2);flex:1;}
+.m-nav-item.active .m-nav-label2{color:var(--m-blue);}
+.m-nav-badge{font-size:10px;font-weight:800;background:var(--m-blue);color:#fff;border-radius:99px;padding:2px 7px;animation:badgeBounce 2s ease infinite;}
+@keyframes badgeBounce{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.m-nav-badge.emerald{background:var(--m-emerald);}
+.m-nav-badge.amber{background:var(--m-amber);}
+.m-sb-footer{margin-top:auto;padding:12px;border-top:1px solid var(--m-border);}
+.m-sb-user{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:12px;cursor:pointer;transition:.2s;}
+.m-sb-user:hover{background:var(--m-bg);}
+.m-sb-avatar{width:34px;height:34px;border-radius:10px;background:var(--m-grad);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;}
+.m-sb-uname{font-size:12px;font-weight:700;color:var(--m-ink);}
+.m-sb-urole{font-size:10px;color:var(--m-muted);}
+.m-collapse-btn{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:var(--m-muted);transition:.2s;margin-top:4px;}
+.m-collapse-btn:hover{background:var(--m-bg);color:var(--m-blue);}
+/* Manager Main */
+#m-main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--m-bg);}
+#m-topbar{height:60px;background:var(--m-surface);border-bottom:1px solid var(--m-border);display:flex;align-items:center;padding:0 24px;gap:14px;flex-shrink:0;position:relative;}
+#m-topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(37,99,235,0.4),rgba(124,58,237,0.3),transparent);animation:topbarGlow 3s ease infinite;}
+@keyframes topbarGlow{0%,100%{opacity:.5;}50%{opacity:1;}}
+.m-pg-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:var(--m-ink);}
+.m-live-pill{display:flex;align-items:center;gap:6px;background:rgba(5,150,105,0.1);border:1px solid rgba(5,150,105,0.3);border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--m-emerald);}
+.m-live-dot{width:7px;height:7px;border-radius:50%;background:var(--m-emerald);animation:livePulse 1.5s ease infinite;}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(5,150,105,.5);}70%{opacity:.85;box-shadow:0 0 0 7px rgba(5,150,105,0);}}
+.m-tb-search{display:flex;align-items:center;gap:8px;background:var(--m-bg);border:1.5px solid var(--m-border2);border-radius:10px;padding:7px 13px;width:260px;transition:.25s;}
+.m-tb-search:focus-within{border-color:var(--m-blue);width:310px;box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.m-tb-search input{border:none;background:transparent;outline:none;font-family:'Outfit',sans-serif;font-size:13px;color:var(--m-ink);flex:1;}
+.m-tb-spacer{flex:1;}
+.m-tb-btn{width:36px;height:36px;border-radius:10px;background:var(--m-bg);border:1.5px solid var(--m-border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:.2s;position:relative;}
+.m-tb-btn:hover{background:rgba(37,99,235,0.08);border-color:var(--m-blue);}
+.m-tb-nbadge{position:absolute;top:-4px;right:-4px;width:15px;height:15px;border-radius:50%;background:var(--m-rose);border:2px solid var(--m-surface);font-size:8px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;}
+.m-tb-avatar{width:36px;height:36px;border-radius:10px;background:var(--m-grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,0.3);transition:.2s;}
+.m-tb-avatar:hover{transform:scale(1.08);}
+.m-clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--m-muted);font-weight:600;}
+#m-content{flex:1;overflow-y:auto;padding:20px 24px;}
+/* Manager pages */
+.m-page{display:none;}
+.m-page.active{display:block;animation:mPageIn .35s cubic-bezier(.22,1,.36,1);}
+@keyframes mPageIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+/* Manager cards */
+.m-card{background:var(--m-surface);border:1px solid var(--m-border);border-radius:var(--radius);box-shadow:0 2px 10px rgba(15,23,42,0.05);transition:all .25s;}
+.m-card:hover{box-shadow:0 8px 30px rgba(15,23,42,0.1);transform:translateY(-1px);}
+.m-card-pad{padding:20px;}
+/* KPI */
+.m-kpi{background:var(--m-surface);border:1px solid var(--m-border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:all .35s cubic-bezier(.34,1.56,.64,1);cursor:default;}
+.m-kpi:hover{transform:translateY(-5px) scale(1.01);box-shadow:0 20px 50px rgba(15,23,42,0.12);}
+.m-kpi:hover .m-kpi-icon{transform:scale(1.2) rotate(-8deg);}
+.m-kpi-icon{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+.m-kpi-val{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1;margin-bottom:4px;}
+.m-kpi-lbl{font-size:12px;color:var(--m-muted);font-weight:600;}
+.m-kpi-spark{width:100%;height:28px;display:block;margin-top:10px;}
+.m-kpi-trend{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;border-radius:99px;padding:3px 8px;margin-top:8px;}
+.m-kpi-trend.up{background:rgba(5,150,105,0.1);color:var(--m-emerald);}
+.m-kpi-trend.dn{background:rgba(220,38,38,0.1);color:var(--m-rose);}
+.m-kpi-accent{position:absolute;top:0;right:0;width:70px;height:70px;border-radius:50%;transform:translate(30%,-30%);opacity:.12;}
+/* Section title */
+.m-sec-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--m-ink);}
+.m-sec-sub{font-size:11px;color:var(--m-muted);margin-top:3px;}
+/* Badge */
+.m-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;border-radius:99px;padding:3px 9px;}
+.m-badge-blue{background:rgba(37,99,235,.1);color:var(--m-blue);}
+.m-badge-violet{background:rgba(124,58,237,.1);color:var(--m-violet);}
+.m-badge-emerald{background:rgba(5,150,105,.1);color:var(--m-emerald);}
+.m-badge-amber{background:rgba(217,119,6,.1);color:var(--m-amber);}
+.m-badge-rose{background:rgba(220,38,38,.1);color:var(--m-rose);}
+.m-badge-cyan{background:rgba(8,145,178,.1);color:var(--m-cyan);}
+/* Button */
+.m-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .25s;position:relative;overflow:hidden;}
+.m-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:translateX(-100%);transition:transform .5s;}
+.m-btn:hover::after{transform:translateX(100%);}
+.m-btn:active{transform:scale(.96);}
+.m-btn-primary{background:var(--m-grad);color:#fff;box-shadow:0 4px 16px rgba(37,99,235,.35);animation:btnGlowMgr 3s ease infinite;}
+@keyframes btnGlowMgr{0%,100%{box-shadow:0 4px 16px rgba(37,99,235,.35);}50%{box-shadow:0 6px 28px rgba(37,99,235,.6),0 0 40px rgba(124,58,237,.2);}}
+.m-btn-primary:hover{transform:translateY(-2px);}
+.m-btn-ghost{background:transparent;border:1.5px solid var(--m-border2);color:var(--m-ink2);}
+.m-btn-ghost:hover{border-color:var(--m-blue);color:var(--m-blue);background:rgba(37,99,235,.06);}
+.m-btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+/* Progress */
+.m-prog{height:6px;background:var(--m-bg2);border-radius:99px;overflow:hidden;}
+.m-prog-fill{height:100%;border-radius:99px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+/* Table */
+.m-table{width:100%;border-collapse:collapse;}
+.m-table thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--m-muted);border-bottom:1px solid var(--m-border);background:var(--m-bg);}
+.m-table tbody tr{border-bottom:1px solid var(--m-border);transition:.15s;cursor:pointer;}
+.m-table tbody tr:hover{background:var(--m-bg);}
+.m-table td{padding:12px 14px;font-size:13px;color:var(--m-ink2);}
+/* Toggle */
+.m-toggle{width:42px;height:22px;border-radius:11px;background:var(--m-bg3,#e2e8f0);border:2px solid var(--m-border2);position:relative;cursor:pointer;transition:.3s;flex-shrink:0;}
+.m-toggle.on{background:var(--m-blue);border-color:var(--m-blue);}
+.m-toggle-k{position:absolute;top:1px;left:1px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.m-toggle.on .m-toggle-k{left:20px;}
+/* Map canvas */
+#m-map-canvas{width:100%;height:100%;display:block;}
+
+/* ══════════════════════════════════════════════════════
+   CUSTOMER APP
+══════════════════════════════════════════════════════ */
+#customer-app{
+  display:none;position:fixed;inset:0;
+  background:var(--c-bg);color:var(--c-text);
+  flex-direction:column;overflow:hidden;
+}
+/* Customer hero splash */
+#c-hero{
+  position:relative;height:300px;flex-shrink:0;overflow:hidden;
+  background:linear-gradient(180deg,#0a1628 0%,#060d1a 100%);
+}
+#c-hero-canvas{position:absolute;inset:0;width:100%;height:100%;}
+.c-hero-content{position:relative;z-index:2;padding:20px 22px 0;}
+.c-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.c-logo{display:flex;align-items:center;gap:8px;}
+.c-logo-icon{width:36px;height:36px;border-radius:11px;background:var(--c-grad);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(20,184,166,.4);}
+.c-logo-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#fff;}
+.c-notif-btn{width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;position:relative;transition:.2s;}
+.c-notif-btn:hover{background:rgba(255,255,255,.15);}
+.c-notif-dot{position:absolute;top:-3px;right:-3px;width:13px;height:13px;border-radius:50%;background:#ec4899;border:2px solid var(--c-bg);font-size:8px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;}
+.c-greeting{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:4px;}
+.c-user-name{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:14px;}
+/* Loyalty card */
+.c-loyalty-strip{
+  background:linear-gradient(135deg,rgba(20,184,166,.15),rgba(59,130,246,.1));
+  border:1px solid rgba(20,184,166,.2);
+  border-radius:14px;padding:14px 18px;
+  display:flex;align-items:center;gap:14px;
+}
+.c-loyalty-icon{font-size:28px;}
+.c-loyalty-pts{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--c-teal);}
+.c-loyalty-lbl{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;}
+.c-loyalty-tier{margin-left:auto;text-align:right;}
+.c-tier-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:99px;padding:4px 12px;font-size:11px;font-weight:800;color:#fff;}
+.c-tier-next{font-size:10px;color:rgba(255,255,255,.45);margin-top:4px;}
+
+/* Customer body scroll area */
+#c-body{flex:1;overflow-y:auto;padding:0 0 80px;}
+.c-section{padding:20px 22px 4px;}
+.c-section-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+/* Offer cards */
+.c-offer-scroll{display:flex;gap:14px;overflow-x:auto;padding:0 22px 4px;scrollbar-width:none;}
+.c-offer-scroll::-webkit-scrollbar{display:none;}
+.c-offer-card{
+  flex-shrink:0;width:180px;border-radius:18px;padding:18px;position:relative;overflow:hidden;cursor:pointer;
+  transition:all .35s cubic-bezier(.34,1.56,.64,1);
+}
+.c-offer-card:hover{transform:translateY(-4px) scale(1.03);}
+.c-offer-emoji{font-size:32px;margin-bottom:10px;display:block;}
+.c-offer-store{font-size:11px;font-weight:700;margin-bottom:4px;opacity:.8;}
+.c-offer-name{font-size:13px;font-weight:800;color:#fff;margin-bottom:8px;line-height:1.3;}
+.c-offer-pct{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#fff;}
+.c-offer-pct span{font-size:14px;opacity:.8;} 
+.c-offer-dist{font-size:10px;margin-top:6px;opacity:.7;display:flex;align-items:center;gap:4px;}
+.c-offer-timer{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.3);border-radius:8px;padding:4px 8px;font-size:10px;font-weight:700;color:#fff;}
+/* Feature banners */
+.c-feature-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 22px;}
+.c-feature-card{
+  border-radius:16px;padding:18px;position:relative;overflow:hidden;cursor:pointer;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);
+}
+.c-feature-card:hover{transform:translateY(-4px);}
+.c-feat-icon{font-size:26px;margin-bottom:10px;display:block;}
+.c-feat-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:3px;}
+.c-feat-desc{font-size:11px;opacity:.65;color:#fff;line-height:1.4;}
+/* Gamification */
+.c-game-card{
+  margin:0 22px;border-radius:18px;padding:20px;
+  background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(236,72,153,.15));
+  border:1px solid rgba(139,92,246,.25);
+  position:relative;overflow:hidden;cursor:pointer;transition:.3s;
+}
+.c-game-card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(139,92,246,.2);}
+.c-game-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:6px;}
+.c-game-desc{font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;}
+.c-challenge-list{display:flex;flex-direction:column;gap:10px;}
+.c-challenge{display:flex;align-items:center;gap:12px;}
+.c-challenge-icon{font-size:20px;}
+.c-challenge-info{flex:1;}
+.c-challenge-name{font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;}
+.c-challenge-prog{height:5px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;}
+.c-challenge-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#8b5cf6,#ec4899);transition:width 1.2s ease;}
+.c-challenge-pts{font-size:10px;color:#f59e0b;font-weight:700;white-space:nowrap;}
+/* Crowd detection */
+.c-crowd-banner{
+  margin:0 22px;border-radius:16px;padding:16px 20px;
+  display:flex;align-items:center;gap:14px;
+  border:1px solid;
+  transition:.3s;cursor:pointer;
+}
+.c-crowd-banner:hover{transform:translateY(-2px);}
+.c-crowd-icon{font-size:28px;}
+.c-crowd-text-main{font-size:14px;font-weight:800;color:#fff;}
+.c-crowd-text-sub{font-size:11px;margin-top:3px;opacity:.7;}
+.c-crowd-offer{margin-left:auto;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+/* Time-based offer banner */
+.c-time-banner{
+  margin:0 22px;border-radius:16px;padding:18px 20px;
+  background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(236,72,153,.1));
+  border:1px solid rgba(245,158,11,.25);
+  margin-bottom:14px;
+  transition:.3s;cursor:pointer;
+}
+.c-time-banner:hover{transform:translateY(-2px);}
+.c-time-label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#f59e0b;margin-bottom:6px;}
+.c-time-offer{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;}
+.c-time-sub{font-size:12px;color:rgba(255,255,255,.55);}
+.c-time-badge{float:right;background:linear-gradient(135deg,#f59e0b,#ec4899);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:800;color:#fff;}
+/* Recent activity */
+.c-activity-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.c-activity-item:last-child{border-bottom:none;}
+.c-act-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.c-act-title{font-size:13px;font-weight:700;color:#fff;}
+.c-act-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;}
+.c-act-pts{font-size:13px;font-weight:800;margin-left:auto;white-space:nowrap;}
+/* Inventory flash sale */
+.c-flash-scroll{display:flex;gap:12px;overflow-x:auto;padding:0 22px 4px;scrollbar-width:none;}
+.c-flash-scroll::-webkit-scrollbar{display:none;}
+.c-flash-card{flex-shrink:0;width:150px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);padding:14px;cursor:pointer;transition:.3s;}
+.c-flash-card:hover{background:rgba(255,255,255,.12);transform:translateY(-3px);}
+.c-flash-emoji{font-size:28px;margin-bottom:8px;display:block;}
+.c-flash-name{font-size:12px;font-weight:700;color:#fff;margin-bottom:4px;}
+.c-flash-reason{font-size:10px;color:rgba(255,255,255,.4);margin-bottom:8px;}
+.c-flash-pct{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#22c55e;}
+.c-flash-stock{font-size:9px;color:rgba(255,255,255,.35);margin-top:3px;}
+/* Customer bottom nav */
+#c-bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:rgba(6,13,26,.96);backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,.08);
+  display:flex;padding:8px 0 12px;
+}
+.c-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px;transition:.25s;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);}
+.c-nav-item.active{color:var(--c-teal);}
+.c-nav-icon{font-size:22px;transition:transform .35s cubic-bezier(.34,1.56,.64,1);}
+.c-nav-item:hover .c-nav-icon,.c-nav-item.active .c-nav-icon{transform:scale(1.25);}
+.c-nav-item.active .c-nav-icon{filter:drop-shadow(0 0 8px var(--c-teal));}
+/* C panels */
+.c-panel{display:none;}
+.c-panel.active{display:block;animation:cPanelIn .35s cubic-bezier(.22,1,.36,1);}
+@keyframes cPanelIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+/* Loyalty page */
+.c-loyalty-big{text-align:center;padding:28px 22px;}
+.c-pts-ring{width:160px;height:160px;margin:0 auto 20px;}
+.c-pts-ring canvas{border-radius:50%;}
+.c-tier-card{margin:0 22px 14px;border-radius:16px;padding:20px;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(236,72,153,.12));border:1px solid rgba(245,158,11,.2);}
+/* Nearby map */
+.c-map-wrap{margin:0 22px 14px;border-radius:16px;overflow:hidden;height:220px;position:relative;}
+#c-map-canvas{width:100%;height:100%;display:block;}
+/* Store list */
+.c-store-item{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:.2s;}
+.c-store-item:hover{background:rgba(255,255,255,.04);}
+.c-store-logo{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.c-store-name{font-size:14px;font-weight:700;color:#fff;}
+.c-store-loc{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;}
+.c-store-dist{font-size:12px;font-weight:700;margin-left:auto;white-space:nowrap;}
+.c-store-offer{font-size:10px;margin-top:3px;text-align:right;}
+/* Profile */
+.c-profile-hero{text-align:center;padding:24px 22px 16px;}
+.c-profile-avatar{width:80px;height:80px;border-radius:24px;background:var(--c-grad);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:#fff;margin:0 auto 14px;box-shadow:0 0 40px rgba(20,184,166,.35);}
+.c-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 22px 16px;}
+.c-stat-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;text-align:center;}
+.c-stat-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+.c-stat-lbl{font-size:10px;color:rgba(255,255,255,.45);margin-top:3px;}
+/* POS AI recommendation */
+.c-ai-card{margin:0 22px 14px;border-radius:16px;padding:18px;background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(139,92,246,.1));border:1px solid rgba(59,130,246,.25);}
+.c-ai-title{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#60a5fa;margin-bottom:8px;}
+.c-ai-offer{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:4px;}
+.c-ai-why{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:12px;}
+.c-ai-btn{width:100%;padding:11px;border-radius:11px;border:none;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.25s;position:relative;overflow:hidden;}
+.c-ai-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:.5s;}
+.c-ai-btn:hover::after{transform:translateX(100%);}
+.c-ai-btn:hover{transform:translateY(-2px);}
+
+/* ══════════════════════════════════════════════════════
+   MANAGER CANVASES
+══════════════════════════════════════════════════════ */
+#m-hero-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.m-map-container{position:relative;border-radius:var(--radius);overflow:hidden;height:380px;background:#07111f;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ NEW LOGIN PAGE (from SparkSynch Ultra) ═══════════════════ -->
+<div id="login-page">
+  <!-- Hero 3D Panel -->
+  <div id="login-hero">
+    <div class="hero-noise"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb" style="width:400px;height:400px;top:-100px;left:-100px;animation-duration:12s;"></div>
+    <div class="hero-orb" style="width:250px;height:250px;bottom:80px;right:-60px;animation-duration:9s;animation-delay:-4s;"></div>
+    <canvas id="hero-canvas-3d"></canvas>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <div class="pulse"></div>
+        GPS Live Intelligence
+      </div>
+      <h1 class="hero-title">
+        Real-time GPS<br>
+        <span>customer intelligence</span><br>
+        at scale
+      </h1>
+      <p class="hero-subtitle">
+        SparkSynch combines geofencing, AI association rules, and live analytics to deliver the perfect offer — exactly when your customer needs it.
+      </p>
+      <div class="hero-slides">
+        <div class="hero-slide-dot active" onclick="heroSlide(0)"></div>
+        <div class="hero-slide-dot" onclick="heroSlide(1)"></div>
+        <div class="hero-slide-dot" onclick="heroSlide(2)"></div>
+        <div class="hero-slide-dot" onclick="heroSlide(3)"></div>
+      </div>
+      <div class="hero-stat-cards">
+        <div class="hero-stat-card">
+          <div class="hero-stat-num" id="hc1">0</div>
+          <div class="hero-stat-lbl">Daily Triggers</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="hero-stat-num" id="hc2">0%</div>
+          <div class="hero-stat-lbl">Detection Rate</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="hero-stat-num" id="hc3">0s</div>
+          <div class="hero-stat-lbl">Avg Response</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Panel -->
+  <div id="login-form-panel">
+    <div class="fl-logo">
+      <div class="fl-logo-icon">⚡</div>
+      <div>
+        <div class="fl-logo-name">SparkSynch</div>
+        <div class="fl-logo-sub">GPS Intelligence Platform v5.0</div>
+      </div>
+    </div>
+
+    <h2 class="fl-title" id="login-title">Welcome back</h2>
+    <p class="fl-subtitle" id="login-sub">Choose your access level to continue</p>
+
+    <!-- Role Cards — Manager & Customer only -->
+    <div class="role-card-wrap">
+      <div class="lp-role-card rc-manager selected" onclick="lpSelectRole('manager',this)">
+        <div class="role-card-check">✓</div>
+        <span class="role-card-icon">🏪</span>
+        <div class="role-card-name">Manager</div>
+        <div class="role-card-desc">Full store control</div>
+      </div>
+      <div class="lp-role-card rc-customer" onclick="lpSelectRole('customer',this)">
+        <div class="role-card-check">✓</div>
+        <span class="role-card-icon">🛍️</span>
+        <div class="role-card-name">Customer</div>
+        <div class="role-card-desc">Offers &amp; rewards</div>
+      </div>
+    </div>
+
+    <!-- Dynamic hint -->
+    <div id="lp-role-hint">
+      🏪 Manager login — use <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3a575b545b5d5f487a494a5b48514943545952145355">[email&#160;protected]</a> / any password
+    </div>
+
+    <div class="lp-form-group">
+      <label class="lp-form-label">Email / Employee ID</label>
+      <div class="lp-form-input-wrap">
+        <span class="lp-input-ic">✉️</span>
+        <input class="lp-form-input" type="email" placeholder="manager@sparksynch.io" id="login-email">
+      </div>
+    </div>
+    <div class="lp-form-group">
+      <label class="lp-form-label">Password</label>
+      <div class="lp-form-input-wrap">
+        <span class="lp-input-ic">🔑</span>
+        <input class="lp-form-input" type="password" placeholder="Enter your password" id="login-pass">
+      </div>
+    </div>
+    <div class="lp-form-row">
+      <label class="lp-form-check"><input type="checkbox"> Stay signed in</label>
+      <a class="lp-form-link">Forgot password?</a>
+    </div>
+    <button class="lp-btn-primary lp-ripple-btn" id="login-main-btn" onclick="lpDoLogin(event)">
+      <span id="login-btn-txt">Sign In as Manager →</span>
+    </button>
+    <div class="lp-form-divider">or continue with</div>
+    <button class="lp-btn-sso lp-ripple-btn">🏢 Sign in with SSO / Google Workspace</button>
+    <div class="lp-form-footer">
+      New to SparkSynch? <a>Request access</a> · <a>Privacy Policy</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MANAGER APP ═══════════════════ -->
+<div id="manager-app">
+  <nav id="m-sidebar">
+    <div class="m-sb-logo" onclick="toggleMSidebar()">
+      <div class="m-sb-logo-icon">⚡</div>
+      <div class="m-sb-hide">
+        <div class="m-sb-name">SparkSynch</div>
+        <div class="m-sb-ver">Manager Portal v5.0</div>
+      </div>
+    </div>
+    <div class="m-sb-search m-sb-hide" style="margin:14px 10px 6px;">
+      <span style="font-size:13px;opacity:.5;">🔍</span>
+      <input type="text" placeholder="Search...">
+    </div>
+    <div class="m-nav-section">
+      <div class="m-nav-label m-sb-hide">Overview</div>
+      <div class="m-nav-item active" onclick="mgotoPage('overview',this)" title="Dashboard">
+        <div class="m-nav-icon">📊</div><span class="m-nav-label2 m-sb-hide">Dashboard</span>
+      </div>
+      <div class="m-nav-item" onclick="mgotoPage('gps',this)" title="GPS Live">
+        <div class="m-nav-icon">🗺️</div><span class="m-nav-label2 m-sb-hide">GPS Live</span>
+        <span class="m-nav-badge emerald m-sb-hide">LIVE</span>
+      </div>
+      <div class="m-nav-label m-sb-hide">Intelligence</div>
+      <div class="m-nav-item" onclick="mgotoPage('ai',this)" title="AI Engine">
+        <div class="m-nav-icon">🧠</div><span class="m-nav-label2 m-sb-hide">AI Engine</span>
+      </div>
+      <div class="m-nav-item" onclick="mgotoPage('offers',this)" title="Offers">
+        <div class="m-nav-icon">🎯</div><span class="m-nav-label2 m-sb-hide">Offers</span>
+        <span class="m-nav-badge m-sb-hide">5</span>
+      </div>
+      <div class="m-nav-item" onclick="mgotoPage('inventory',this)" title="Inventory">
+        <div class="m-nav-icon">📦</div><span class="m-nav-label2 m-sb-hide">Inventory</span>
+        <span class="m-nav-badge amber m-sb-hide">!</span>
+      </div>
+      <div class="m-nav-label m-sb-hide">People</div>
+      <div class="m-nav-item" onclick="mgotoPage('customers',this)" title="Customers">
+        <div class="m-nav-icon">👥</div><span class="m-nav-label2 m-sb-hide">Customers</span>
+      </div>
+      <div class="m-nav-item" onclick="mgotoPage('team',this)" title="Team">
+        <div class="m-nav-icon">🏅</div><span class="m-nav-label2 m-sb-hide">Team</span>
+      </div>
+      <div class="m-nav-label m-sb-hide">System</div>
+      <div class="m-nav-item" onclick="mgotoPage('analytics',this)" title="Analytics">
+        <div class="m-nav-icon">📈</div><span class="m-nav-label2 m-sb-hide">Analytics</span>
+      </div>
+      <div class="m-nav-item" onclick="mgotoPage('settings',this)" title="Settings">
+        <div class="m-nav-icon">⚙️</div><span class="m-nav-label2 m-sb-hide">Settings</span>
+      </div>
+    </div>
+    <div class="m-sb-footer">
+      <div class="m-sb-user" onclick="backToRole()">
+        <div class="m-sb-avatar">RK</div>
+        <div class="m-sb-hide">
+          <div class="m-sb-uname">Rajesh Kumar</div>
+          <div class="m-sb-urole">Store Manager</div>
+        </div>
+      </div>
+      <div class="m-collapse-btn" onclick="toggleMSidebar()">
+        <span id="m-coll-icon">◀</span>
+        <span class="m-sb-hide">Collapse</span>
+      </div>
+    </div>
+  </nav>
+
+  <div id="m-main">
+    <div id="m-topbar">
+      <div class="m-pg-title" id="m-pg-title">Dashboard</div>
+      <div class="m-live-pill"><div class="m-live-dot"></div>Live GPS</div>
+      <div class="m-tb-spacer"></div>
+      <div class="m-tb-search">
+        <span style="font-size:13px;opacity:.5;">🔍</span>
+        <input type="text" placeholder="Search customers, offers…">
+        <span style="font-size:11px;color:var(--m-dim);">⌘K</span>
+      </div>
+      <div class="flex gap8">
+        <div class="m-clock" id="m-clock"></div>
+        <div class="m-tb-btn" onclick="mShowToast()">🔔<div class="m-tb-nbadge">3</div></div>
+        <div class="m-tb-btn" id="m-dark-btn" onclick="toggleMDark()" title="Toggle Dark">🌙</div>
+        <div class="m-tb-avatar" onclick="backToRole()">RK</div>
+      </div>
+    </div>
+
+    <div id="m-content">
+
+      <!-- DASHBOARD -->
+      <div class="m-page active" id="m-page-overview">
+        <!-- 3D Background canvas for the hero area -->
+        <div style="position:relative;border-radius:var(--radius);overflow:hidden;margin-bottom:18px;background:linear-gradient(135deg,#0f172a,#1e293b);height:180px;">
+          <canvas id="m-hero-canvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+          <div style="position:relative;z-index:2;padding:24px 28px;height:100%;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#60a5fa;margin-bottom:8px;">AI Geofencing Platform · Live</div>
+              <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;margin-bottom:6px;">Good morning, Rajesh 👋</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.55);">102 customers tracked · 3 zones active · ₹2.4L revenue today</div>
+            </div>
+            <div style="display:flex;gap:14px;">
+              <div style="text-align:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 20px;">
+                <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#34d399;" id="m-kv-triggers">0</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.5);">Today's Triggers</div>
+              </div>
+              <div style="text-align:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 20px;">
+                <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#60a5fa;" id="m-kv-conv">0%</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.5);">Conversion</div>
+              </div>
+              <div style="text-align:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 20px;">
+                <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#a78bfa;" id="m-kv-ai">0</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.5);">AI Rules</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- KPIs -->
+        <div class="grid4 mb16">
+          <div class="m-kpi"><div class="m-kpi-accent" style="background:var(--m-blue);"></div><div class="m-kpi-icon" style="background:rgba(37,99,235,.1);">👥</div><div class="m-kpi-val" style="color:var(--m-blue);" id="m-kpi1">0</div><div class="m-kpi-lbl">Total Customers</div><canvas class="m-kpi-spark" id="m-spark1"></canvas><div class="m-kpi-trend up">▲ 12.4%</div></div>
+          <div class="m-kpi"><div class="m-kpi-accent" style="background:var(--m-emerald);"></div><div class="m-kpi-icon" style="background:rgba(5,150,105,.1);">⚡</div><div class="m-kpi-val" style="color:var(--m-emerald);" id="m-kpi2">0</div><div class="m-kpi-lbl">Daily Triggers</div><canvas class="m-kpi-spark" id="m-spark2"></canvas><div class="m-kpi-trend up">▲ 8.7%</div></div>
+          <div class="m-kpi"><div class="m-kpi-accent" style="background:var(--m-violet);"></div><div class="m-kpi-icon" style="background:rgba(124,58,237,.1);">🤖</div><div class="m-kpi-val" style="color:var(--m-violet);" id="m-kpi3">0</div><div class="m-kpi-lbl">AI Rules Active</div><canvas class="m-kpi-spark" id="m-spark3"></canvas><div class="m-kpi-trend up">▲ 3 new</div></div>
+          <div class="m-kpi"><div class="m-kpi-accent" style="background:var(--m-amber);"></div><div class="m-kpi-icon" style="background:rgba(217,119,6,.1);">💰</div><div class="m-kpi-val" style="color:var(--m-amber);" id="m-kpi4">₹0</div><div class="m-kpi-lbl">Revenue Today</div><canvas class="m-kpi-spark" id="m-spark4"></canvas><div class="m-kpi-trend up">▲ 18.2%</div></div>
+        </div>
+        <!-- GPS Map + Activity -->
+        <div class="grid2 mb16" style="grid-template-columns:1.7fr 1fr;">
+          <div class="m-card">
+            <div style="padding:16px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+              <div><div class="m-sec-title">📡 Live GPS Map — Hyderabad</div><div class="m-sec-sub">Real-time geofence tracking · 102 active</div></div>
+              <div class="flex gap8"><div class="m-badge m-badge-emerald">● 102 Live</div><button class="m-btn m-btn-ghost m-btn-sm">⊕ Zone</button></div>
+            </div>
+            <div class="m-map-container" style="margin:14px;height:300px;">
+              <canvas id="m-map-canvas"></canvas>
+            </div>
+          </div>
+          <div class="m-card m-card-pad">
+            <div class="flex-between mb16"><div class="m-sec-title">⚡ Live Activity</div><div class="m-badge m-badge-emerald">● Live</div></div>
+            <div id="m-act-feed"></div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--m-border);">
+              <div class="m-sec-title" style="font-size:13px;margin-bottom:12px;">🧠 AI Top Suggestions</div>
+              <div id="m-ai-suggestions"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Time-based + Crowd + Inventory insights -->
+        <div class="grid3 mb16">
+          <div class="m-card m-card-pad">
+            <div class="m-sec-title mb12">🕐 Time-Based Offers</div>
+            <div id="m-time-offers"></div>
+          </div>
+          <div class="m-card m-card-pad">
+            <div class="m-sec-title mb12">👫 Crowd Detection</div>
+            <div id="m-crowd-status"></div>
+          </div>
+          <div class="m-card m-card-pad">
+            <div class="m-sec-title mb12">📦 Inventory Alerts</div>
+            <div id="m-inv-alerts"></div>
+          </div>
+        </div>
+        <!-- Segment performance -->
+        <div class="grid2">
+          <div class="m-card m-card-pad">
+            <div class="flex-between mb16"><div class="m-sec-title">🏆 Loyalty Segments</div><button class="m-btn m-btn-ghost m-btn-sm">View All</button></div>
+            <div id="m-seg-bars"></div>
+          </div>
+          <div class="m-card m-card-pad">
+            <div class="flex-between mb16"><div class="m-sec-title">🎮 Gamification Stats</div></div>
+            <div id="m-game-stats"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPS LIVE PAGE -->
+      <div class="m-page" id="m-page-gps">
+        <div class="grid4 mb16">
+          <div class="m-kpi"><div class="m-kpi-icon" style="background:rgba(37,99,235,.1);">📡</div><div class="m-kpi-val" style="color:var(--m-blue);">102</div><div class="m-kpi-lbl">Tracked Now</div></div>
+          <div class="m-kpi"><div class="m-kpi-icon" style="background:rgba(5,150,105,.1);">🏪</div><div class="m-kpi-val" style="color:var(--m-emerald);">5</div><div class="m-kpi-lbl">Active Zones</div></div>
+          <div class="m-kpi"><div class="m-kpi-icon" style="background:rgba(217,119,6,.1);">⚡</div><div class="m-kpi-val" style="color:var(--m-amber);">14</div><div class="m-kpi-lbl">In-Zone Now</div></div>
+          <div class="m-kpi"><div class="m-kpi-icon" style="background:rgba(124,58,237,.1);">🎯</div><div class="m-kpi-val" style="color:var(--m-violet);">98.7%</div><div class="m-kpi-lbl">GPS Accuracy</div></div>
+        </div>
+        <div class="m-card" style="margin-bottom:16px;">
+          <div style="padding:16px 18px 0;"><div class="m-sec-title">Live Geofence Map — Hyderabad, Telangana</div><div class="m-sec-sub">5 zones · Mouse to interact</div></div>
+          <div class="m-map-container" style="margin:14px;height:420px;"><canvas id="m-gps-full-canvas"></canvas></div>
+        </div>
+        <div class="grid2">
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">Zone Statistics</div><div id="m-zone-stats"></div></div>
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">Recent Zone Entries</div><div id="m-zone-entries"></div></div>
+        </div>
+      </div>
+
+      <!-- AI ENGINE -->
+      <div class="m-page" id="m-page-ai">
+        <div style="background:linear-gradient(135deg,#0d0f1e,#111827);border:1px solid rgba(124,58,237,.3);border-radius:var(--radius);overflow:hidden;position:relative;margin-bottom:18px;">
+          <canvas id="m-neural-canvas" style="width:100%;height:200px;display:block;"></canvas>
+          <div style="position:absolute;inset:0;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;pointer-events:none;">
+            <div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#a78bfa;margin-bottom:6px;">Apriori Algorithm · POS Learning Engine</div>
+              <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff;margin-bottom:4px;">AI Association Rule Engine</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.55);">Analyzes 347K+ POS transactions · Predicts next purchase · Generates personalized offers</div>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <div style="text-align:center;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:14px 20px;"><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#a78bfa;">347</div><div style="font-size:11px;color:rgba(255,255,255,.5);">Rules Active</div></div>
+              <div style="text-align:center;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.3);border-radius:14px;padding:14px 20px;"><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#60a5fa;">89%</div><div style="font-size:11px;color:rgba(255,255,255,.5);">Confidence</div></div>
+              <div style="text-align:center;background:rgba(5,150,105,.12);border:1px solid rgba(5,150,105,.3);border-radius:14px;padding:14px 20px;"><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#34d399;">3.2×</div><div style="font-size:11px;color:rgba(255,255,255,.5);">Avg Lift</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid2 mb16">
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">🧠 POS-Learned Rules</div><div id="m-ai-rules"></div></div>
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">📊 Purchase Patterns</div><div id="m-patterns"></div></div>
+        </div>
+        <div class="m-card m-card-pad">
+          <div class="flex-between mb12"><div><div class="m-sec-title">⚡ AI Offer Generator</div><div class="m-sec-sub">Select products → AI generates cross-sell offer from POS data</div></div><div class="m-badge m-badge-violet">Confidence 89%</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;"><div style="font-size:11px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Customer bought:</div><div style="display:flex;gap:6px;flex-wrap:wrap;" id="m-prod-chips"></div></div>
+            <button class="m-btn m-btn-primary" onclick="mGenerateOffer()">⚡ Generate AI Offer</button>
+          </div>
+          <div id="m-gen-result" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <!-- OFFERS -->
+      <div class="m-page" id="m-page-offers">
+        <div class="flex-between mb16"><div><div class="m-sec-title" style="font-size:18px;">Active Offers</div><div class="m-sec-sub">5 active · AI-personalized by geofence zone</div></div><button class="m-btn m-btn-primary">+ Create Offer</button></div>
+        <div class="grid3 mb16" id="m-offer-grid"></div>
+        <div class="m-card"><div style="padding:18px;border-bottom:1px solid var(--m-border);"><div class="m-sec-title">Offer Performance</div></div><table class="m-table"><thead><tr><th>Offer</th><th>Segment</th><th>Triggered</th><th>Redeemed</th><th>Revenue</th><th>Status</th></tr></thead><tbody id="m-offer-tbody"></tbody></table></div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="m-page" id="m-page-inventory">
+        <div class="flex-between mb16"><div><div class="m-sec-title" style="font-size:18px;">Inventory Intelligence</div><div class="m-sec-sub">AI auto-generates discounts for overstocked items</div></div><button class="m-btn m-btn-primary">+ Add Item</button></div>
+        <div class="m-card m-card-pad mb16">
+          <div style="background:linear-gradient(135deg,rgba(217,119,6,.1),rgba(220,38,38,.08));border:1px solid rgba(217,119,6,.25);border-radius:12px;padding:16px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--m-amber);margin-bottom:6px;">⚡ AI Inventory Insight</div>
+            <div style="font-size:14px;font-weight:700;color:var(--m-ink);margin-bottom:4px;">3 items are overstocked — AI recommends auto-discount</div>
+            <div style="font-size:12px;color:var(--m-muted);">Strawberries (+340% stock), Mango Juice (+180%), Sourdough (+220%) — generating flash sale offers now</div>
+          </div>
+          <div id="m-inv-table"></div>
+        </div>
+      </div>
+
+      <!-- CUSTOMERS -->
+      <div class="m-page" id="m-page-customers">
+        <div class="flex-between mb16"><div><div class="m-sec-title" style="font-size:18px;">Customer Intelligence</div><div class="m-sec-sub">2,847 total · Loyalty scored by AI</div></div><button class="m-btn m-btn-primary">+ Add Customer</button></div>
+        <div class="m-card"><table class="m-table"><thead><tr><th>Customer</th><th>Segment</th><th>Loyalty Score</th><th>Purchases</th><th>Last Visit</th><th>GPS Status</th><th>Action</th></tr></thead><tbody id="m-cust-tbody"></tbody></table></div>
+      </div>
+
+      <!-- TEAM -->
+      <div class="m-page" id="m-page-team">
+        <div class="flex-between mb16"><div><div class="m-sec-title" style="font-size:18px;">Team Members</div><div class="m-sec-sub">18 members · 14 active</div></div><button class="m-btn m-btn-primary">+ Add Member</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;" id="m-team-grid"></div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div class="m-page" id="m-page-analytics">
+        <div style="background:linear-gradient(135deg,#060d1f,#0d1a35);border:1px solid rgba(37,99,235,.25);border-radius:var(--radius);overflow:hidden;position:relative;margin-bottom:18px;">
+          <canvas id="m-wave-canvas" style="width:100%;height:160px;display:block;"></canvas>
+          <div style="position:absolute;inset:0;padding:20px 28px;display:flex;align-items:flex-end;pointer-events:none;">
+            <div><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;">Revenue Intelligence · Live Analytics</div></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;">
+          <div class="m-kpi" style="padding:16px;"><div class="m-kpi-val" style="font-size:24px;color:var(--m-blue);">34.2%</div><div class="m-kpi-lbl">Conversion</div><div class="m-kpi-trend up">▲ 5.3%</div></div>
+          <div class="m-kpi" style="padding:16px;"><div class="m-kpi-val" style="font-size:24px;color:var(--m-emerald);">68%</div><div class="m-kpi-lbl">Retention</div><div class="m-kpi-trend up">▲ 2.1%</div></div>
+          <div class="m-kpi" style="padding:16px;"><div class="m-kpi-val" style="font-size:24px;color:var(--m-cyan);">1.4s</div><div class="m-kpi-lbl">Trigger Time</div><div class="m-kpi-trend up">▲ Faster</div></div>
+          <div class="m-kpi" style="padding:16px;"><div class="m-kpi-val" style="font-size:24px;color:var(--m-amber);">₹847</div><div class="m-kpi-lbl">Avg Basket</div><div class="m-kpi-trend up">▲ 9.2%</div></div>
+          <div class="m-kpi" style="padding:16px;"><div class="m-kpi-val" style="font-size:24px;color:var(--m-violet);">89%</div><div class="m-kpi-lbl">AI Confidence</div><div class="m-kpi-trend up">▲ 1.4%</div></div>
+        </div>
+        <div class="grid2">
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">Top Products</div><div id="m-an-stats"></div></div>
+          <div class="m-card m-card-pad"><div class="m-sec-title mb12">Conversion Funnel</div><div id="m-funnel"></div></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="m-page" id="m-page-settings">
+        <div class="grid2">
+          <div class="m-card m-card-pad"><div class="m-sec-title mb16">⚙️ Platform Settings</div><div id="m-settings-list"></div></div>
+          <div class="m-card m-card-pad">
+            <div class="m-sec-title mb16">🔐 Security & Access</div>
+            <div style="margin-bottom:12px;"><label style="font-size:11px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">Password</label><input type="password" placeholder="New password" style="width:100%;padding:11px 14px;border:1.5px solid var(--m-border2);border-radius:10px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--m-ink);background:var(--m-bg);outline:none;"></div>
+            <button class="m-btn m-btn-primary" style="width:100%;justify-content:center;">🔒 Update Password</button>
+            <div style="margin-top:20px;"><div class="m-sec-title" style="font-size:13px;margin-bottom:12px;">API Configuration</div>
+            <div style="background:var(--m-bg);border:1px solid var(--m-border2);border-radius:10px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m-muted);">API Key: sk_live_••••••••••••3f8a<br>Endpoint: api.sparksynch.io/v5<br>Geofence Webhook: Enabled</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end m-content -->
+  </div><!-- end m-main -->
+
+  <!-- Manager Toast -->
+  <div id="m-toast" style="position:fixed;bottom:20px;right:20px;z-index:9999;background:var(--m-surface);border:1px solid var(--m-border);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 60px rgba(15,23,42,0.15);max-width:320px;transform:translateX(130%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);">
+    <div id="m-toast-icon" style="font-size:22px;flex-shrink:0;"></div>
+    <div style="flex:1;"><div id="m-toast-title" style="font-size:13px;font-weight:700;color:var(--m-ink);margin-bottom:2px;"></div><div id="m-toast-body" style="font-size:11px;color:var(--m-muted);line-height:1.4;"></div></div>
+    <div onclick="document.getElementById('m-toast').style.transform='translateX(130%)'" style="font-size:16px;color:var(--m-dim);cursor:pointer;flex-shrink:0;">✕</div>
+  </div>
+</div><!-- end manager-app -->
+
+<!-- ═══════════════════ CUSTOMER APP ═══════════════════ -->
+<div id="customer-app">
+  <!-- Hero -->
+  <div id="c-hero">
+    <canvas id="c-hero-canvas"></canvas>
+    <div class="c-hero-content">
+      <div class="c-topbar">
+        <div class="c-logo"><div class="c-logo-icon">🛍️</div><div class="c-logo-name">SparkSynch</div></div>
+        <div class="flex gap8">
+          <div style="font-size:11px;color:rgba(255,255,255,.45);padding:5px 10px;background:rgba(255,255,255,.06);border-radius:99px;">📍 Jubilee Hills</div>
+          <div class="c-notif-btn">🔔<div class="c-notif-dot">3</div></div>
+          <div class="c-notif-btn" onclick="backToRole()" style="font-size:13px;">↩</div>
+        </div>
+      </div>
+      <div class="c-greeting" id="c-time-greeting">Good morning 👋</div>
+      <div class="c-user-name">Priya Reddy</div>
+      <div class="c-loyalty-strip">
+        <div class="c-loyalty-icon">⭐</div>
+        <div><div class="c-loyalty-pts" id="c-pts">2,840</div><div class="c-loyalty-lbl">SparkPoints · Gold Member</div></div>
+        <div class="c-loyalty-tier">
+          <div class="c-tier-badge">👑 Gold</div>
+          <div class="c-tier-next">1,160 pts to Platinum</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div id="c-body">
+    <!-- HOME PANEL -->
+    <div class="c-panel active" id="c-panel-home">
+
+      <!-- AI POS Recommendation -->
+      <div class="c-section" style="padding-bottom:0;">
+        <div class="c-ai-card">
+          <div class="c-ai-title">🤖 AI Personalized · Based on your POS history</div>
+          <div class="c-ai-offer" id="c-ai-offer-text">Buy Coffee today → Get Cookies 20% OFF</div>
+          <div class="c-ai-why">You buy Coffee 4×/week. AI detected high probability of Cookies purchase.</div>
+          <button class="c-ai-btn" onclick="cClaimOffer()">🎯 Claim This Offer Now</button>
+        </div>
+      </div>
+
+      <!-- Time-based offer -->
+      <div class="c-section" style="padding-bottom:0;">
+        <div class="c-time-banner" id="c-time-banner">
+          <div style="overflow:hidden;">
+            <div class="c-time-badge" id="c-time-badge">🌅 Morning</div>
+            <div class="c-time-label" id="c-time-label">Morning Special · Until 12:00 PM</div>
+            <div class="c-time-offer" id="c-time-offer">☕ Coffee & Breakfast Bundle</div>
+            <div class="c-time-sub">Available at FreshMart · 120m away</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Crowd Detection Banner -->
+      <div class="c-section" style="padding-bottom:0;">
+        <div class="c-crowd-banner" id="c-crowd-banner">
+          <div class="c-crowd-icon" id="c-crowd-icon">🟢</div>
+          <div>
+            <div class="c-crowd-text-main" id="c-crowd-main">Store is less crowded now!</div>
+            <div class="c-crowd-text-sub" id="c-crowd-sub">FreshMart · Only 8 people inside</div>
+          </div>
+          <div class="c-crowd-offer" id="c-crowd-offer" style="color:#22c55e;">+25%</div>
+        </div>
+      </div>
+
+      <!-- Nearby AI Offers -->
+      <div class="c-section">
+        <div class="c-section-title">🎯 Nearby AI Offers <span style="font-size:11px;color:rgba(255,255,255,.4);font-weight:400;">based on your location</span></div>
+      </div>
+      <div class="c-offer-scroll" id="c-offers-scroll"></div>
+
+      <!-- Flash Sales (Inventory-aware) -->
+      <div class="c-section" style="margin-top:8px;">
+        <div class="c-section-title">⚡ Flash Sales <span style="font-size:11px;color:rgba(255,255,255,.4);font-weight:400;">overstocked · today only</span></div>
+      </div>
+      <div class="c-flash-scroll" id="c-flash-scroll"></div>
+
+      <!-- Feature cards -->
+      <div class="c-section" style="margin-top:8px;">
+        <div class="c-section-title">🚀 Your Tools</div>
+        <div class="c-feature-row">
+          <div class="c-feature-card" style="background:linear-gradient(135deg,rgba(20,184,166,.2),rgba(59,130,246,.12));border:1px solid rgba(20,184,166,.2);" onclick="setCPanel('nearby')">
+            <span class="c-feat-icon">📍</span>
+            <div class="c-feat-title">Nearby Stores</div>
+            <div class="c-feat-desc">5 stores near you with live offers</div>
+          </div>
+          <div class="c-feature-card" style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(236,72,153,.12));border:1px solid rgba(245,158,11,.2);" onclick="setCPanel('loyalty')">
+            <span class="c-feat-icon">⭐</span>
+            <div class="c-feat-title">My Rewards</div>
+            <div class="c-feat-desc">2,840 pts · Redeem now</div>
+          </div>
+          <div class="c-feature-card" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(236,72,153,.12));border:1px solid rgba(139,92,246,.2);" onclick="setCPanel('challenges')">
+            <span class="c-feat-icon">🎮</span>
+            <div class="c-feat-title">Challenges</div>
+            <div class="c-feat-desc">3 active · Win bonus points</div>
+          </div>
+          <div class="c-feature-card" style="background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(20,184,166,.1));border:1px solid rgba(34,197,94,.2);" onclick="setCPanel('history')">
+            <span class="c-feat-icon">📋</span>
+            <div class="c-feat-title">My History</div>
+            <div class="c-feat-desc">18 purchases · ₹840 saved</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="c-section">
+        <div class="c-section-title">🕐 Recent Activity</div>
+        <div id="c-activity-list" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:6px 14px;"></div>
+      </div>
+    </div>
+
+    <!-- NEARBY PANEL -->
+    <div class="c-panel" id="c-panel-nearby">
+      <div class="c-section"><div class="c-section-title">📍 Stores Near You <span style="font-size:11px;color:rgba(255,255,255,.4);font-weight:400;">Jubilee Hills area</span></div></div>
+      <div class="c-map-wrap"><canvas id="c-map-canvas"></canvas></div>
+      <div id="c-store-list"></div>
+    </div>
+
+    <!-- LOYALTY PANEL -->
+    <div class="c-panel" id="c-panel-loyalty">
+      <div class="c-loyalty-big">
+        <div style="width:140px;height:140px;margin:0 auto 20px;position:relative;">
+          <canvas id="c-pts-ring" width="140" height="140"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--c-teal);">2,840</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.45);">Points</div>
+          </div>
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;">Gold Member</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px;">1,160 pts to Platinum · 2× points on all purchases</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button style="padding:12px 22px;border-radius:12px;background:var(--c-grad);border:none;color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🎁 Redeem Points</button>
+          <button style="padding:12px 22px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">📲 Share QR</button>
+        </div>
+      </div>
+      <div class="c-tier-card">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:10px;">Your Tier Progress</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:12px;color:rgba(255,255,255,.6);">Silver → Gold ✓</span><span style="font-size:12px;color:rgba(255,255,255,.6);">Gold → Platinum: 1,160 pts</span>
+        </div>
+        <div style="height:8px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:71%;background:linear-gradient(90deg,#f59e0b,#ec4899);border-radius:99px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;">
+          <div style="text-align:center;background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#f59e0b;">2×</div><div style="font-size:10px;color:rgba(255,255,255,.45);">Points Mult.</div></div>
+          <div style="text-align:center;background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#ec4899;">Early</div><div style="font-size:10px;color:rgba(255,255,255,.45);">Access</div></div>
+          <div style="text-align:center;background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#8b5cf6;">VIP</div><div style="font-size:10px;color:rgba(255,255,255,.45);">Support</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHALLENGES / GAMIFICATION PANEL -->
+    <div class="c-panel" id="c-panel-challenges">
+      <div class="c-section"><div class="c-section-title">🎮 Gamified Shopping</div></div>
+      <div class="c-game-card" style="margin-bottom:14px;">
+        <div class="c-game-title">🏆 Weekly Challenges</div>
+        <div class="c-game-desc">Complete challenges → earn bonus SparkPoints and unlock exclusive rewards</div>
+        <div class="c-challenge-list" id="c-challenges"></div>
+      </div>
+      <!-- Leaderboard -->
+      <div class="c-section"><div class="c-section-title">🥇 Neighborhood Leaderboard</div></div>
+      <div style="padding:0 22px;" id="c-leaderboard"></div>
+      <!-- Achievements -->
+      <div class="c-section" style="margin-top:8px;"><div class="c-section-title">🎖️ Your Achievements</div></div>
+      <div style="display:flex;gap:12px;overflow-x:auto;padding:0 22px 16px;scrollbar-width:none;" id="c-achievements"></div>
+    </div>
+
+    <!-- HISTORY PANEL -->
+    <div class="c-panel" id="c-panel-history">
+      <div class="c-section"><div class="c-section-title">📋 Purchase History</div></div>
+      <div id="c-history-list" style="padding:0 22px;"></div>
+    </div>
+
+    <!-- PROFILE PANEL -->
+    <div class="c-panel" id="c-panel-profile">
+      <div class="c-profile-hero">
+        <div class="c-profile-avatar">PR</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;">Priya Reddy</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c3b3b1aabaa2edb1a6a7a7ba83a4aea2aaafeda0acae">[email&#160;protected]</a> · Gold Member</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(20,184,166,.15);border:1px solid rgba(20,184,166,.25);border-radius:99px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--c-teal);">📍 Jubilee Hills, Hyderabad</div>
+      </div>
+      <div class="c-stat-grid">
+        <div class="c-stat-box"><div class="c-stat-val" style="color:var(--c-teal);">18</div><div class="c-stat-lbl">Purchases</div></div>
+        <div class="c-stat-box"><div class="c-stat-val" style="color:var(--c-gold);">₹12.4K</div><div class="c-stat-lbl">Total Spent</div></div>
+        <div class="c-stat-box"><div class="c-stat-val" style="color:var(--c-pink);">₹840</div><div class="c-stat-lbl">Saved</div></div>
+      </div>
+      <div style="padding:0 22px 16px;">
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;color:rgba(255,255,255,.8);">Nearby Alerts</span><div class="m-toggle on" onclick="this.classList.toggle('on')"><div class="m-toggle-k"></div></div></div>
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;color:rgba(255,255,255,.8);">Time-Based Offers</span><div class="m-toggle on" onclick="this.classList.toggle('on')"><div class="m-toggle-k"></div></div></div>
+          <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;color:rgba(255,255,255,.8);">GPS Tracking</span><div class="m-toggle on" onclick="this.classList.toggle('on')"><div class="m-toggle-k"></div></div></div>
+        </div>
+        <button onclick="backToRole()" style="width:100%;margin-top:14px;padding:13px;border-radius:12px;background:rgba(220,38,38,.12);border:1.5px solid rgba(220,38,38,.25);color:#f87171;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">↩ Switch Portal</button>
+      </div>
+    </div>
+
+  </div><!-- end c-body -->
+
+  <div id="c-bottom-nav">
+    <div class="c-nav-item active" onclick="setCPanel('home',this)"><div class="c-nav-icon">🏠</div>Home</div>
+    <div class="c-nav-item" onclick="setCPanel('nearby',this)"><div class="c-nav-icon">📍</div>Nearby</div>
+    <div class="c-nav-item" onclick="setCPanel('loyalty',this)"><div class="c-nav-icon">⭐</div>Rewards</div>
+    <div class="c-nav-item" onclick="setCPanel('challenges',this)"><div class="c-nav-icon">🎮</div>Challenges</div>
+    <div class="c-nav-item" onclick="setCPanel('profile',this)"><div class="c-nav-icon">👤</div>Profile</div>
+  </div>
+</div><!-- end customer-app -->
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ═══════════════════════════════════════════════════════════
+// NEW LOGIN PAGE — THREE.JS HERO 3D (from SparkSynch Ultra)
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', function() {
+(function() {
+  const canvas = document.getElementById('hero-canvas-3d');
+  const panel  = document.getElementById('login-hero');
+  // clientWidth/clientHeight are reliable after full layout
+  const W = panel.clientWidth  || Math.round(window.innerWidth * 0.62);
+  const H = panel.clientHeight || window.innerHeight;
+
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.setClearColor(0, 0);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, W/H, 0.1, 600);
+  camera.position.set(0, 0, 55);
+
+  scene.add(new THREE.AmbientLight(0x0a0a30, 2));
+  const l1 = new THREE.PointLight(0x3b6ef8, 4, 120); l1.position.set(20, 20, 20); scene.add(l1);
+  const l2 = new THREE.PointLight(0x7c5cfc, 3, 100); l2.position.set(-20, -15, 15); scene.add(l2);
+  const l3 = new THREE.PointLight(0x00b894, 2, 80);  l3.position.set(0, 30, -10); scene.add(l3);
+  const l4 = new THREE.PointLight(0x0abde3, 2, 80);  l4.position.set(-30, 0, 10); scene.add(l4);
+
+  const torusKnotGeo = new THREE.TorusKnotGeometry(8, 1.8, 180, 20, 2, 3);
+  const torusKnotMat = new THREE.MeshPhongMaterial({
+    color: 0x3b6ef8, emissive: 0x1a3a80, emissiveIntensity: 0.4,
+    transparent: true, opacity: 0.85, shininess: 120,
+  });
+  const torusKnot = new THREE.Mesh(torusKnotGeo, torusKnotMat);
+  scene.add(torusKnot);
+  const knotWire = new THREE.Mesh(torusKnotGeo, new THREE.MeshBasicMaterial({
+    color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.18
+  }));
+  scene.add(knotWire);
+
+  const rings = [];
+  const ringData = [
+    { r:14, tube:0.18, color:0x3b6ef8, tilt:[1.2,0.3,0], speed:0.004 },
+    { r:18, tube:0.14, color:0x7c5cfc, tilt:[0.5,1.1,0], speed:-0.003 },
+    { r:22, tube:0.12, color:0x00b894, tilt:[0.2,0.8,1.0], speed:0.0025 },
+    { r:26, tube:0.10, color:0x0abde3, tilt:[1.5,0.2,0.5], speed:-0.002 },
+  ];
+  ringData.forEach(rd => {
+    const geo = new THREE.TorusGeometry(rd.r, rd.tube, 8, 90);
+    const mat = new THREE.MeshPhongMaterial({ color: rd.color, emissive: rd.color, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.set(...rd.tilt);
+    ring.userData.speed = rd.speed;
+    scene.add(ring);
+    rings.push(ring);
+  });
+
+  const partCount = 1800;
+  const partPos = new Float32Array(partCount * 3);
+  const partColors = new Float32Array(partCount * 3);
+  const palette3 = [[0.23,0.43,0.97],[0.49,0.36,0.99],[0,0.72,0.58],[0.04,0.74,0.89],[1,1,1]];
+  for (let i = 0; i < partCount; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
+    const r     = 28 + Math.random() * 40;
+    partPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    partPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    partPos[i*3+2] = r * Math.cos(phi);
+    const c = palette3[i % palette3.length];
+    partColors[i*3] = c[0]; partColors[i*3+1] = c[1]; partColors[i*3+2] = c[2];
+  }
+  const partGeo = new THREE.BufferGeometry();
+  partGeo.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
+  partGeo.setAttribute('color', new THREE.BufferAttribute(partColors, 3));
+  const partMat = new THREE.PointsMaterial({ size: 0.35, vertexColors: true, transparent: true, opacity: 0.85 });
+  const particles = new THREE.Points(partGeo, partMat);
+  scene.add(particles);
+
+  const hexPanels = [];
+  function makeHexPanel(size, x, y, z, rotX, rotY, col) {
+    const geo = new THREE.CircleGeometry(size, 6);
+    const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z); mesh.rotation.set(rotX, rotY, 0);
+    const eGeo = new THREE.EdgesGeometry(geo);
+    const eMat = new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.45 });
+    const edge = new THREE.LineSegments(eGeo, eMat);
+    edge.position.set(x, y, z); edge.rotation.set(rotX, rotY, 0);
+    scene.add(mesh); scene.add(edge);
+    hexPanels.push({ mesh, edge, baseY: y, speed: 0.005 + Math.random() * 0.008 });
+  }
+  makeHexPanel(6, -32, 12, -5, 0.3, 0.5, 0x3b6ef8);
+  makeHexPanel(5, 30, -10, -8, -0.2, -0.4, 0x7c5cfc);
+  makeHexPanel(7, -20, -20, 5, 0.6, 0.2, 0x00b894);
+  makeHexPanel(4, 35, 18, 0, 0.1, -0.6, 0x0abde3);
+
+  const satellites = [];
+  [{orbitR:16,speed:0.012,phase:0,size:0.9,col:0x60a5fa},{orbitR:21,speed:-0.009,phase:2.1,size:0.7,col:0xa78bfa},
+   {orbitR:25,speed:0.007,phase:4.2,size:0.6,col:0x34d399},{orbitR:13,speed:-0.015,phase:1.0,size:0.8,col:0x38bdf8}]
+  .forEach(sd => {
+    const geo = new THREE.IcosahedronGeometry(sd.size, 0);
+    const mat = new THREE.MeshPhongMaterial({ color: sd.col, emissive: sd.col, emissiveIntensity: 0.6 });
+    const mesh = new THREE.Mesh(geo, mat);
+    const tGeo = new THREE.TorusGeometry(sd.orbitR, 0.04, 4, 80);
+    const trail = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({ color: sd.col, transparent: true, opacity: 0.12 }));
+    trail.rotation.x = Math.random() * Math.PI; trail.rotation.y = Math.random() * Math.PI;
+    scene.add(trail); scene.add(mesh);
+    satellites.push({ mesh, trail, ...sd, angle: sd.phase });
+  });
+
+  let mx = 0, my = 0;
+  document.addEventListener('mousemove', e => {
+    mx = (e.clientX / window.innerWidth - 0.5) * 2;
+    my = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  let t = 0;
+  (function animate() {
+    requestAnimationFrame(animate);
+    t += 0.008;
+    camera.position.x += (mx * 6 - camera.position.x) * 0.03;
+    camera.position.y += (-my * 4 - camera.position.y) * 0.03;
+    camera.lookAt(0, 0, 0);
+    torusKnot.rotation.x = t * 0.3; torusKnot.rotation.y = t * 0.5; torusKnot.rotation.z = t * 0.2;
+    knotWire.rotation.copy(torusKnot.rotation);
+    const pulse = 1 + Math.sin(t * 2) * 0.04;
+    torusKnot.scale.set(pulse, pulse, pulse);
+    const col = new THREE.Color().setHSL((t * 0.1 % 1) * 0.4 + 0.55, 0.8, 0.5);
+    torusKnotMat.emissive = col;
+    rings.forEach(ring => { ring.rotation.y += ring.userData.speed; ring.rotation.x += ring.userData.speed * 0.3; });
+    particles.rotation.y = t * 0.04; particles.rotation.x = t * 0.02;
+    partMat.opacity = 0.7 + Math.sin(t * 3) * 0.15;
+    hexPanels.forEach((hp, i) => {
+      hp.mesh.position.y = hp.baseY + Math.sin(t * hp.speed * 8 + i) * 3;
+      hp.edge.position.y = hp.mesh.position.y;
+      hp.mesh.rotation.z += 0.002; hp.edge.rotation.z += 0.002;
+    });
+    satellites.forEach(sat => {
+      sat.angle += sat.speed;
+      sat.mesh.position.x = Math.cos(sat.angle) * sat.orbitR;
+      sat.mesh.position.y = Math.sin(sat.angle * 0.7) * sat.orbitR * 0.3;
+      sat.mesh.position.z = Math.sin(sat.angle) * sat.orbitR;
+      sat.mesh.rotation.x += 0.03; sat.mesh.rotation.y += 0.02;
+    });
+    l1.position.x = Math.cos(t * 0.5) * 25; l1.position.z = Math.sin(t * 0.5) * 25;
+    l2.position.x = Math.cos(t * 0.4 + 2) * 22; l2.position.z = Math.sin(t * 0.4 + 2) * 22;
+    l3.position.y = Math.sin(t * 0.3) * 25;
+    renderer.render(scene, camera);
+  })();
+
+  // Resize support
+  window.addEventListener('resize', () => {
+    const nW = panel.clientWidth || Math.round(window.innerWidth * 0.62);
+    const nH = panel.clientHeight || window.innerHeight;
+    renderer.setSize(nW, nH);
+    camera.aspect = nW / nH;
+    camera.updateProjectionMatrix();
+  });
+})(); // end 3D IIFE
+}); // end window.load
+
+// Hero stat counter animation
+document.addEventListener('DOMContentLoaded', function() {
+  const targets = [{el:'hc1',val:2847,suf:''},{el:'hc2',val:99.7,suf:'%'},{el:'hc3',val:1.2,suf:'s'}];
+  targets.forEach(({el,val,suf}) => {
+    const elem = document.getElementById(el);
+    if(!elem) return;
+    let cur = 0, step = val / 60;
+    const timer = setInterval(()=>{
+      cur = Math.min(cur + step, val);
+      elem.textContent = (val % 1 !== 0 ? cur.toFixed(1) : Math.round(cur)) + suf;
+      if(cur >= val) clearInterval(timer);
+    }, 25);
+  });
+});
+
+// Hero slide auto-rotate
+let heroSlideIdx = 0;
+function heroSlide(i) {
+  heroSlideIdx = i;
+  document.querySelectorAll('.hero-slide-dot').forEach((d,idx) => d.classList.toggle('active', idx===i));
+}
+setInterval(()=>heroSlide((heroSlideIdx+1)%4), 4000);
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN PAGE ROLE SELECTION & ROUTING
+// ═══════════════════════════════════════════════════════════
+let lpSelectedRole = 'manager';
+const LP_ROLE_CONFIG = {
+  manager:  { hint:'🏪 Manager login — full dashboard access', ph:'manager@sparksynch.io', btn:'Sign In as Manager →', hintStyle:'background:var(--blue-soft);border-color:rgba(59,110,248,0.2);color:var(--blue);' },
+  customer: { hint:'🛍️ Customer login — offers, rewards & nearby stores', ph:'customer@gmail.com', btn:'Continue as Customer →', hintStyle:'background:var(--emerald-soft);border-color:rgba(0,184,148,0.2);color:var(--emerald);' },
+};
+
+function lpSelectRole(role, el) {
+  lpSelectedRole = role;
+  document.querySelectorAll('.lp-role-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const cfg = LP_ROLE_CONFIG[role];
+  const hint = document.getElementById('lp-role-hint');
+  hint.textContent = cfg.hint;
+  hint.style.cssText = 'margin-bottom:16px;padding:10px 14px;border-radius:12px;border:1px solid;font-size:12px;font-weight:600;transition:all 0.3s;' + cfg.hintStyle;
+  document.getElementById('login-email').placeholder = cfg.ph;
+  document.getElementById('login-btn-txt').textContent = cfg.btn;
+  lpAddRipple(el);
+}
+
+function lpAddRipple(el, e) {
+  const r = document.createElement('span');
+  r.className = 'ripple-circle';
+  const size = Math.max(el.offsetWidth, el.offsetHeight);
+  r.style.width = r.style.height = size + 'px';
+  r.style.left = ((e ? e.offsetX : el.offsetWidth/2) - size/2) + 'px';
+  r.style.top = ((e ? e.offsetY : el.offsetHeight/2) - size/2) + 'px';
+  el.appendChild(r);
+  setTimeout(()=>r.remove(), 700);
+}
+document.querySelectorAll('.lp-ripple-btn').forEach(btn => {
+  btn.addEventListener('click', e => lpAddRipple(btn, e));
+});
+
+function lpDoLogin(e) {
+  const btn = document.getElementById('login-main-btn');
+  const txt = document.getElementById('login-btn-txt');
+  if(e) lpAddRipple(btn, e);
+  txt.textContent = 'Authenticating…';
+  btn.style.opacity = '0.8';
+
+  setTimeout(() => {
+    const lp = document.getElementById('login-page');
+    lp.classList.add('exit');
+    setTimeout(() => {
+      lp.style.display = 'none';
+      btn.style.opacity = '1';
+      txt.textContent = LP_ROLE_CONFIG[lpSelectedRole].btn;
+      if(lpSelectedRole === 'customer') {
+        launchCustomer();
+      } else {
+        launchManager();
+      }
+    }, 750);
+  }, 900);
+}
+
+function backToLogin() {
+  document.getElementById('manager-app').style.display = 'none';
+  document.getElementById('customer-app').style.display = 'none';
+  const lp = document.getElementById('login-page');
+  lp.style.display = 'flex';
+  lp.classList.remove('exit');
+}
+
+document.getElementById('login-email').addEventListener('keydown', e => e.key==='Enter' && lpDoLogin());
+document.getElementById('login-pass').addEventListener('keydown', e => e.key==='Enter' && lpDoLogin());
+
+// ═══════════════════════════════════════════════════════════
+// ROUTING (kept for compatibility — now called from lpDoLogin)
+// ═══════════════════════════════════════════════════════════
+function launchManager(){
+  document.getElementById('manager-app').style.display='flex';
+  initManager();
+}
+function launchCustomer(){
+  document.getElementById('customer-app').style.display='flex';
+  initCustomer();
+}
+function backToRole(){ backToLogin(); }
+function animateRoleExit(cb){ cb(); }
+
+// ═══════════════════════════════════════════════════════════
+// MANAGER DATA
+// ═══════════════════════════════════════════════════════════
+const M_ACTS=[
+  {t:'Priya Reddy entered FreshMart → AI sent Bakery 15% OFF',c:'#059669',ic:'📍'},
+  {t:'AI Rule #12 fired — Meera VIP: Dairy 25% dispatch',c:'#7c3aed',ic:'🤖'},
+  {t:'Sai Kumar redeemed ₹200 dairy bundle',c:'#2563eb',ic:'⚡'},
+  {t:'Crowd low @ SmartMart → 25% flash offer triggered',c:'#d97706',ic:'👫'},
+  {t:'Inventory alert: Strawberries overstocked → AI discount',c:'#dc2626',ic:'📦'},
+];
+const M_RULES=[
+  {if:'Coffee + Bread',then:'Butter 18% OFF',sup:'71%',lif:'3.8×',seg:'All'},
+  {if:'Milk + Cereal',then:'Honey Bundle',sup:'65%',lif:'3.2×',seg:'Regular'},
+  {if:'Shampoo + Cond.',then:'Hair Mask Free',sup:'58%',lif:'2.9×',seg:'VIP'},
+  {if:'Chicken + Spices',then:'BBQ Sauce 25%',sup:'74%',lif:'4.1×',seg:'All'},
+];
+const M_PATS=[{c:'Dairy + Bakery',v:82},{c:'Coffee + Snacks',v:76},{c:'Produce + Protein',v:64},{c:'Personal Care',v:58},{c:'Beverages + Chips',v:49}];
+const M_PRODS=['☕ Coffee','🥛 Milk','🥖 Bread','🥚 Eggs','🍗 Chicken','🧀 Cheese','🧴 Shampoo','🍷 Juice'];
+const M_OFFERS=[
+  {e:'☕',n:'Coffee Bundle',d:15,t:234,sg:'All',st:'Active',rev:'₹18.2K'},
+  {e:'🥛',n:'Dairy Delight',d:20,t:189,sg:'VIP',st:'Active',rev:'₹28.4K'},
+  {e:'🍗',n:'Protein Pack',d:25,t:97,sg:'Regular',st:'Active',rev:'₹14.8K'},
+  {e:'🧴',n:'Personal Care',d:30,t:142,sg:'VIP',st:'Active',rev:'₹22.1K'},
+  {e:'⚡',n:'Flash Strawberry',d:40,t:88,sg:'All',st:'Active',rev:'₹8.6K'},
+];
+const M_CUSTS=[
+  {n:'Priya Reddy',seg:'VIP',sc:94,p:'₹12.4K',l:'2h ago',st:'In-zone',visits:24},
+  {n:'Meera Sharma',seg:'VIP',sc:97,p:'₹22.1K',l:'1h ago',st:'In-zone',visits:38},
+  {n:'Sai Kumar',seg:'Regular',sc:72,p:'₹4.2K',l:'Yesterday',st:'Active',visits:12},
+  {n:'Arjun Patel',seg:'New',sc:31,p:'₹900',l:'Today',st:'Active',visits:2},
+  {n:'Kiran Reddy',seg:'Regular',sc:68,p:'₹6.8K',l:'5h ago',st:'Active',visits:16},
+  {n:'Divya Nair',seg:'VIP',sc:96,p:'₹18.9K',l:'30m ago',st:'In-zone',visits:44},
+  {n:'Rahul Singh',seg:'New',sc:22,p:'₹600',l:'3d ago',st:'Inactive',visits:1},
+];
+const M_TEAM=[
+  {n:'Priya K',r:'Cashier',s:'on',sc:94,c:'#2563eb'},{n:'Arun M',r:'Supervisor',s:'brk',sc:88,c:'#7c3aed'},
+  {n:'Divya R',r:'Stock',s:'on',sc:91,c:'#059669'},{n:'Suresh P',r:'Security',s:'on',sc:82,c:'#d97706'},
+  {n:'Lakshmi T',r:'Cashier',s:'off',sc:78,c:'#dc2626'},{n:'Venkat S',r:'Manager',s:'on',sc:97,c:'#0891b2'},
+];
+const M_SETT=[
+  {n:'AI Auto-Rules',d:'Apriori discovers rules automatically',on:true},
+  {n:'Geofence Alerts',d:'Real-time entry/exit notifications',on:true},
+  {n:'Crowd Detection',d:'Send offers when store is empty',on:true},
+  {n:'Inventory Auto-Discount',d:'AI discounts overstocked items',on:true},
+  {n:'Time-Based Offers',d:'Morning/evening offer switching',on:true},
+  {n:'VIP Priority',d:'VIPs get offers first',on:false},
+];
+const M_SEGS=[{n:'VIP',v:38,c:'#7c3aed'},{n:'Regular',v:72,c:'#2563eb'},{n:'New',v:28,c:'#059669'},{n:'Inactive',v:15,c:'#d97706'}];
+const M_TIME_OFFERS=[
+  {time:'Morning',icon:'☕',offer:'Coffee & Breakfast Bundle',pct:15,zone:'FreshMart'},
+  {time:'Afternoon',icon:'🥗',offer:'Lunch Salad Combo',pct:10,zone:'SmartMart'},
+  {time:'Evening',icon:'🍿',offer:'Snack & Beverage Pack',pct:20,zone:'QuickShop'},
+];
+const M_CROWD=[
+  {store:'FreshMart',ppl:8,cap:80,status:'Low',offer:'+25%'},
+  {store:'SmartMart',ppl:52,cap:80,status:'Normal',offer:null},
+  {store:'QuickShop',ppl:12,cap:50,status:'Low',offer:'+20%'},
+];
+const M_INV=[
+  {n:'🍓 Strawberries',stock:340,normal:100,over:'+240%',offer:40,action:'Flash Sale Active'},
+  {n:'🥭 Mango Juice',stock:280,normal:100,over:'+180%',offer:30,action:'Generating Offer'},
+  {n:'🍞 Sourdough',stock:322,normal:100,over:'+222%',offer:35,action:'Flash Sale Active'},
+  {n:'🥦 Broccoli',stock:90,normal:80,over:'Normal',offer:null,action:'Healthy Stock'},
+  {n:'🥛 Oat Milk',stock:55,normal:60,over:'Low',offer:null,action:'Reorder Soon'},
+];
+const M_ZONES_DATA=[
+  {n:'FreshMart',loc:'Jubilee Hills',cust:34,c:'#059669'},{n:'SmartMart',loc:'Banjara Hills',cust:18,c:'#2563eb'},
+  {n:'QuickShop',loc:'Madhapur',cust:22,c:'#d97706'},{n:'MediPlus',loc:'Kondapur',cust:9,c:'#dc2626'},
+  {n:'TechZone',loc:'Gachibowli',cust:12,c:'#7c3aed'},
+];
+const M_GAME_STATS=[
+  {l:'Active Players',v:'847',c:'#7c3aed'},{l:'Challenges Done',v:'2,341',c:'#2563eb'},
+  {l:'Points Issued',v:'94.2K',c:'#d97706'},{l:'Coupons Won',v:'318',c:'#059669'},
+];
+const M_TOASTS=[
+  {ic:'📍',t:'Geofence Entry',b:'Priya Reddy @ FreshMart — AI offer dispatched 1.2s'},
+  {ic:'🤖',t:'AI Rule Fired',b:'VIP Meera: Dairy bundle 25% generated'},
+  {ic:'📦',t:'Inventory Alert',b:'Strawberries overstocked → Flash sale 40% created'},
+  {ic:'👫',t:'Crowd Low',b:'FreshMart: 8 customers → +25% impulse offer sent'},
+];
+let mToastIdx=0,mToastT,mPage='overview',mSel=new Set(),mDark=false,mSidebarColl=false;
+
+// ═══════════════════════════════════════════════════════════
+// MANAGER INIT
+// ═══════════════════════════════════════════════════════════
+function initManager(){
+  renderMActFeed();renderMAIRules();renderMPatterns();renderMOffers();renderMCustomers();
+  renderMTeam();renderMSettings();renderMTimeOffers();renderMCrowdStatus();renderMInvAlerts();
+  renderMProdChips();renderMSegBars();renderMGameStats();renderMAnStats();renderMFunnel();
+  renderMZoneStats();renderMZoneEntries();renderMInvTable();renderMAISuggestions();
+  setTimeout(()=>{
+    mCountUp('m-kpi1',2847,1300);mCountUp('m-kpi2',1024,1400);mCountUp('m-kpi3',347,1200);
+    mCountUpStr('m-kpi4','₹',240000,1500);
+    mCountUp('m-kv-triggers',1024,1400);
+    const cv=document.getElementById('m-kv-conv');
+    if(cv){let s=Date.now();(function u(){let p=Math.min((Date.now()-s)/1300,1),e=1-Math.pow(1-p,3);cv.textContent=Math.round(e*34.2)+'%';if(p<1)requestAnimationFrame(u);})();}
+    mCountUp('m-kv-ai',347,1200);
+    ['m-spark1','m-spark2','m-spark3','m-spark4'].forEach((id,i)=>{
+      mDrawSparkline(id,[[180,220,195,260,240,290,275,310,285,320,347],[80,120,95,140,110,160,130,180,150,200,167],[280,290,295,305,310,318,325,330,338,342,347],[120,180,150,220,190,250,210,280,230,320,240]][i],['#2563eb','#059669','#7c3aed','#d97706'][i]);
+    });
+  },300);
+  mStartClock();
+  setTimeout(()=>mShowToast(),3500);
+  setInterval(()=>mShowToast(),14000);
+  setInterval(mTickFeed,5200);
+  initMHeroCanvas();initMMapCanvas('m-map-canvas');
+}
+
+function mCountUp(id,to,dur){
+  const el=document.getElementById(id);if(!el)return;
+  const s=Date.now();(function u(){let p=Math.min((Date.now()-s)/dur,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(e*to);if(p<1)requestAnimationFrame(u);})();
+}
+function mCountUpStr(id,prefix,to,dur){
+  const el=document.getElementById(id);if(!el)return;
+  const s=Date.now();(function u(){let p=Math.min((Date.now()-s)/dur,1),e=1-Math.pow(1-p,3);el.textContent=prefix+Math.round(e*to).toLocaleString('en-IN');if(p<1)requestAnimationFrame(u);})();
+}
+function mDrawSparkline(id,data,color){
+  const c=document.getElementById(id);if(!c)return;
+  const W=c.offsetWidth||180,H=28;c.width=W;c.height=H;
+  const ctx=c.getContext('2d'),max=Math.max(...data),min=Math.min(...data);
+  const pts=data.map((v,i)=>({x:i/(data.length-1)*W,y:H-(v-min)/(max-min||1)*(H-5)-2.5}));
+  const grd=ctx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0,color+'44');grd.addColorStop(1,color+'00');
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fillStyle=grd;ctx.fill();
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.stroke();
+  const lp=pts[pts.length-1];ctx.beginPath();ctx.arc(lp.x,lp.y,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+}
+
+// Manager page navigation
+function mgotoPage(id,el){
+  if(id===mPage)return;
+  document.getElementById('m-page-'+mPage).classList.remove('active');
+  document.getElementById('m-page-'+id).classList.add('active');
+  document.querySelectorAll('.m-nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('m-pg-title').textContent={overview:'Dashboard',gps:'GPS Live',ai:'AI Engine',offers:'Offers',inventory:'Inventory',customers:'Customers',team:'Team',analytics:'Analytics',settings:'Settings'}[id];
+  mPage=id;
+  if(id==='gps')setTimeout(()=>initMMapCanvas('m-gps-full-canvas'),150);
+  if(id==='ai')setTimeout(()=>initMNeuralCanvas(),150);
+  if(id==='analytics')setTimeout(()=>initMWaveCanvas(),150);
+}
+
+function toggleMSidebar(){
+  mSidebarColl=!mSidebarColl;
+  document.getElementById('m-sidebar').classList.toggle('collapsed',mSidebarColl);
+  document.querySelectorAll('.m-sb-hide').forEach(e=>e.style.display=mSidebarColl?'none':'');
+  document.getElementById('m-coll-icon').textContent=mSidebarColl?'▶':'◀';
+}
+
+function mStartClock(){
+  const el=document.getElementById('m-clock');
+  function tick(){if(el)el.textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+  tick();setInterval(tick,1000);
+}
+
+// Renders
+function renderMActFeed(){
+  const el=document.getElementById('m-act-feed');if(!el)return;
+  el.innerHTML=M_ACTS.map(a=>`<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);">
+    <div style="width:34px;height:34px;border-radius:10px;background:rgba(${hexToRgb(a.c)},.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${a.ic}</div>
+    <div style="flex:1;"><div style="font-size:12px;color:var(--m-ink2);line-height:1.4;">${a.t}</div><div style="font-size:10px;color:var(--m-dim);margin-top:2px;">just now</div></div>
+  </div>`).join('');
+}
+function mTickFeed(){
+  const el=document.getElementById('m-act-feed');if(!el||mPage!=='overview')return;
+  const a=M_ACTS[Math.floor(Math.random()*M_ACTS.length)];
+  const d=document.createElement('div');d.style.cssText='display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);opacity:0;transform:translateY(-8px);transition:all .4s;';
+  d.innerHTML=`<div style="width:34px;height:34px;border-radius:10px;background:rgba(${hexToRgb(a.c)},.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${a.ic}</div><div style="flex:1;"><div style="font-size:12px;color:var(--m-ink2);">${a.t}</div><div style="font-size:10px;color:var(--m-dim);">just now</div></div>`;
+  el.insertBefore(d,el.firstChild);requestAnimationFrame(()=>{d.style.opacity='1';d.style.transform='translateY(0)';});
+  if(el.children.length>5)el.removeChild(el.lastChild);
+}
+function renderMAISuggestions(){
+  const el=document.getElementById('m-ai-suggestions');if(!el)return;
+  el.innerHTML=M_RULES.slice(0,3).map(r=>`<div style="background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;transition:.2s;" onmouseover="this.style.borderColor='var(--m-violet)'" onmouseout="this.style.borderColor='rgba(124,58,237,.15)'">
+    <div style="font-size:11px;margin-bottom:4px;color:var(--m-muted);">IF <span style="background:var(--m-bg);border-radius:5px;padding:2px 7px;font-weight:600;color:var(--m-ink);">${r.if}</span> → <span style="background:rgba(5,150,105,.1);border-radius:5px;padding:2px 7px;font-weight:600;color:var(--m-emerald);">${r.then}</span></div>
+    <div style="font-size:10px;color:var(--m-dim);">Sup: <strong style="color:var(--m-blue);">${r.sup}</strong> · Lift: <strong style="color:var(--m-violet);">${r.lif}</strong> · Seg: ${r.seg}</div>
+  </div>`).join('');
+}
+function renderMTimeOffers(){
+  const el=document.getElementById('m-time-offers');if(!el)return;
+  const now=new Date().getHours();
+  el.innerHTML=M_TIME_OFFERS.map(o=>{const active=(o.time==='Morning'&&now<12)||(o.time==='Afternoon'&&now>=12&&now<17)||(o.time==='Evening'&&now>=17);return`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);">
+      <div style="font-size:22px;">${o.icon}</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--m-ink);">${o.offer}</div><div style="font-size:10px;color:var(--m-muted);">${o.time} · ${o.zone}</div></div>
+      <span style="font-size:20px;font-weight:800;color:${active?'var(--m-emerald)':'var(--m-muted)'};">${o.pct}%</span>
+      ${active?'<span style="font-size:9px;font-weight:800;background:rgba(5,150,105,.12);color:var(--m-emerald);border-radius:99px;padding:3px 8px;">ACTIVE</span>':''}
+    </div>`;}).join('');
+}
+function renderMCrowdStatus(){
+  const el=document.getElementById('m-crowd-status');if(!el)return;
+  el.innerHTML=M_CROWD.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);">
+      <div style="font-size:18px;">${c.status==='Low'?'🟢':'🟡'}</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--m-ink);">${c.store}</div>
+        <div style="height:5px;background:var(--m-bg2);border-radius:99px;overflow:hidden;margin-top:5px;"><div style="height:100%;width:${(c.ppl/c.cap*100).toFixed(0)}%;background:${c.status==='Low'?'var(--m-emerald)':'var(--m-amber)'};border-radius:99px;"></div></div>
+        <div style="font-size:10px;color:var(--m-muted);margin-top:2px;">${c.ppl}/${c.cap} capacity</div>
+      </div>
+      ${c.offer?`<span style="font-size:16px;font-weight:800;color:var(--m-emerald);">${c.offer}</span>`:''}
+    </div>`).join('');
+}
+function renderMInvAlerts(){
+  const el=document.getElementById('m-inv-alerts');if(!el)return;
+  el.innerHTML=M_INV.filter(i=>i.offer).slice(0,3).map(i=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--m-border);">
+      <div style="font-size:20px;">${i.n.split(' ')[0]}</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:var(--m-ink);">${i.n.split(' ').slice(1).join(' ')}</div>
+        <div style="font-size:10px;color:var(--m-muted);">Overstocked ${i.over}</div>
+      </div>
+      <span style="font-size:16px;font-weight:800;color:var(--m-amber);">${i.offer}%</span>
+    </div>`).join('');
+}
+function renderMProdChips(){
+  const el=document.getElementById('m-prod-chips');if(!el)return;
+  el.innerHTML=M_PRODS.map(p=>`<div onclick="mTogProd('${p}',this)" style="padding:6px 13px;background:var(--m-bg);border:1.5px solid var(--m-border2);border-radius:99px;cursor:pointer;font-size:12px;font-weight:600;transition:.2s;">${p}</div>`).join('');
+}
+function mTogProd(p,el){
+  if(mSel.has(p)){mSel.delete(p);el.style.background='var(--m-bg)';el.style.borderColor='var(--m-border2)';el.style.color='';}
+  else{mSel.add(p);el.style.background='rgba(37,99,235,.1)';el.style.borderColor='var(--m-blue)';el.style.color='var(--m-blue)';}
+}
+function mGenerateOffer(){
+  const out=document.getElementById('m-gen-result'),sel=[...mSel];
+  if(!sel.length){out.innerHTML='<div style="color:var(--m-amber);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.2);border-radius:10px;padding:12px;font-size:12px;">⚠️ Select at least one product first.</div>';return;}
+  const r=M_RULES.find(x=>sel.some(s=>s.includes(x.if.split(' ')[0].replace(/[^a-zA-Z]/g,''))));
+  const msg=r?`AI (POS Analysis): Customer who buys <strong>${sel.join(', ')}</strong> → Offer <strong style="color:var(--m-emerald);">${r.then}</strong> · Confidence: <strong>${r.sup}</strong> · Lift: <strong>${r.lif}</strong>`:
+    `AI recommends: <strong style="color:var(--m-violet);">15% combo</strong> on next purchase of ${sel[0]}`;
+  out.innerHTML=`<div style="background:rgba(5,150,105,.06);border:1px solid rgba(5,150,105,.25);border-radius:12px;padding:14px;display:flex;gap:12px;align-items:center;">
+    <span style="font-size:32px;">🎯</span>
+    <div><div style="font-family:'Syne',sans-serif;color:var(--m-emerald);font-size:15px;font-weight:800;margin-bottom:4px;">AI Offer Generated!</div>
+    <div style="font-size:12px;color:var(--m-ink2);">${msg}</div></div>
+    <button class="m-btn m-btn-primary m-btn-sm" style="margin-left:auto;">Deploy →</button>
+  </div>`;
+}
+function renderMAIRules(){
+  const el=document.getElementById('m-ai-rules');if(!el)return;
+  el.innerHTML=M_RULES.map(r=>`<div style="background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:10px;padding:13px;margin-bottom:10px;cursor:pointer;transition:.2s;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform=''">
+    <div style="font-size:12px;margin-bottom:5px;">IF <span style="background:var(--m-bg);border-radius:5px;padding:2px 8px;font-weight:600;">${r.if}</span> → <span style="background:rgba(5,150,105,.1);border-radius:5px;padding:2px 8px;font-weight:600;color:var(--m-emerald);">${r.then}</span></div>
+    <div style="font-size:10px;color:var(--m-muted);">Support: <strong style="color:var(--m-blue);">${r.sup}</strong> · Lift: <strong style="color:var(--m-violet);">${r.lif}</strong></div>
+  </div>`).join('');
+}
+function renderMPatterns(){
+  const el=document.getElementById('m-patterns');if(!el)return;
+  el.innerHTML=M_PATS.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);">
+    <span style="font-size:12px;flex:1;color:var(--m-ink2);">${p.c}</span>
+    <div class="m-prog" style="flex:2;"><div class="m-prog-fill" style="width:${p.v}%;background:var(--m-grad);"></div></div>
+    <span style="font-size:11px;font-weight:700;color:var(--m-blue);min-width:32px;text-align:right;">${p.v}%</span>
+  </div>`).join('');
+}
+function renderMOffers(){
+  const og=document.getElementById('m-offer-grid');
+  if(og)og.innerHTML=M_OFFERS.map(o=>`<div style="background:var(--m-surface);border:1px solid var(--m-border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;cursor:pointer;transition:.3s;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 16px 40px rgba(15,23,42,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--m-grad);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:32px;">${o.e}</span><span class="m-badge m-badge-emerald">${o.st}</span></div>
+    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px;">${o.n}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--m-emerald);">${o.d}<span style="font-size:16px;">%</span></div>
+    <div style="font-size:11px;color:var(--m-muted);margin-top:6px;">${o.t} triggered · ${o.sg} · ${o.rev}</div>
+  </div>`).join('');
+
+  const tbody=document.getElementById('m-offer-tbody');
+  if(tbody)tbody.innerHTML=M_OFFERS.map(o=>`<tr><td style="font-weight:700;">${o.e} ${o.n}</td><td><span class="m-badge m-badge-blue">${o.sg}</span></td><td>${o.t}</td><td style="color:var(--m-emerald);font-weight:700;">${Math.round(o.t*.42)}</td><td style="font-weight:700;">${o.rev}</td><td><span class="m-badge m-badge-emerald">${o.st}</span></td></tr>`).join('');
+}
+function renderMCustomers(){
+  const el=document.getElementById('m-cust-tbody');if(!el)return;
+  const segBadge={VIP:'m-badge-violet',Regular:'m-badge-blue',New:'m-badge-emerald',Inactive:'m-badge-amber'};
+  el.innerHTML=M_CUSTS.map(c=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:9px;background:var(--m-grad);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;">${c.n[0]}</div><span style="font-weight:700;">${c.n}</span></div></td>
+    <td><span class="m-badge ${segBadge[c.seg]}">${c.seg}</span></td>
+    <td><div style="display:flex;align-items:center;gap:8px;"><div class="m-prog" style="width:60px;"><div class="m-prog-fill" style="width:${c.sc}%;background:var(--m-grad);"></div></div><span style="font-size:11px;font-weight:700;color:var(--m-blue);">${c.sc}</span></div></td>
+    <td style="font-weight:700;">${c.p}</td>
+    <td style="color:var(--m-muted);">${c.l}</td>
+    <td><div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:50%;background:${c.st==='In-zone'?'var(--m-emerald)':c.st==='Active'?'var(--m-blue)':'var(--m-dim)'};"></div>${c.st}</div></td>
+    <td><button class="m-btn m-btn-ghost m-btn-sm">Offer</button></td>
+  </tr>`).join('');
+}
+function renderMTeam(){
+  const el=document.getElementById('m-team-grid');if(!el)return;
+  el.innerHTML=M_TEAM.map(m=>`<div style="background:var(--m-surface);border:1px solid var(--m-border);border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer;transition:.35s cubic-bezier(.34,1.56,.64,1);" onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 16px 40px rgba(15,23,42,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+    <div style="width:52px;height:52px;border-radius:16px;background:${m.c};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin:0 auto 10px;position:relative;">
+      ${m.n[0]}${m.n.split(' ')[1]?m.n.split(' ')[1][0]:''}
+      <div style="position:absolute;bottom:-3px;right:-3px;width:13px;height:13px;border-radius:50%;background:${m.s==='on'?'#059669':m.s==='brk'?'#d97706':'#94a3b8'};border:2px solid var(--m-surface);"></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--m-ink);margin-bottom:2px;">${m.n}</div>
+    <div style="font-size:10px;color:var(--m-muted);margin-bottom:10px;">${m.r}</div>
+    <div style="font-size:20px;font-weight:800;color:${m.c};">${m.sc}</div>
+    <div style="font-size:10px;color:var(--m-muted);">Performance</div>
+  </div>`).join('');
+}
+function renderMSettings(){
+  const el=document.getElementById('m-settings-list');if(!el)return;
+  el.innerHTML=M_SETT.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid var(--m-border);">
+    <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--m-ink);">${s.n}</div><div style="font-size:11px;color:var(--m-muted);margin-top:2px;">${s.d}</div></div>
+    <div class="m-toggle ${s.on?'on':''}" onclick="this.classList.toggle('on')"><div class="m-toggle-k"></div></div>
+  </div>`).join('');
+}
+function renderMSegBars(){
+  const el=document.getElementById('m-seg-bars');if(!el)return;
+  const max=Math.max(...M_SEGS.map(s=>s.v));
+  el.innerHTML=M_SEGS.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--m-border);">
+    <span style="font-size:12px;font-weight:600;width:70px;color:var(--m-ink2);">${s.n}</span>
+    <div class="m-prog" style="flex:1;"><div class="m-prog-fill" style="width:${(s.v/max*100).toFixed(0)}%;background:${s.c};"></div></div>
+    <span style="font-size:12px;font-weight:800;color:${s.c};min-width:24px;text-align:right;">${s.v}</span>
+  </div>`).join('');
+}
+function renderMGameStats(){
+  const el=document.getElementById('m-game-stats');if(!el)return;
+  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${M_GAME_STATS.map(g=>`<div style="background:var(--m-bg);border-radius:12px;padding:14px;text-align:center;"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${g.c};">${g.v}</div><div style="font-size:11px;color:var(--m-muted);margin-top:3px;">${g.l}</div></div>`).join('')}</div>`;
+}
+function renderMAnStats(){
+  const el=document.getElementById('m-an-stats');if(!el)return;
+  const data=[{n:'Fresh Dairy',v:88,a:'₹34.2K'},{n:'Bakery',v:76,a:'₹28.1K'},{n:'Produce',v:64,a:'₹22.4K'},{n:'Protein',v:58,a:'₹20.1K'},{n:'Beverages',v:49,a:'₹17.8K'}];
+  el.innerHTML=data.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--m-border);">
+    <span style="font-size:12px;font-weight:600;flex:1;color:var(--m-ink2);">${s.n}</span>
+    <div class="m-prog" style="flex:2;"><div class="m-prog-fill" style="width:${s.v}%;background:var(--m-grad);"></div></div>
+    <span style="font-size:12px;font-weight:700;color:var(--m-blue);min-width:48px;text-align:right;">${s.a}</span>
+  </div>`).join('');
+}
+function renderMFunnel(){
+  const el=document.getElementById('m-funnel');if(!el)return;
+  const data=[{l:'Zone Entry',v:1024,pct:100},{l:'Offer Sent',v:847,pct:82},{l:'Opened',v:634,pct:62},{l:'Tapped',v:398,pct:39},{l:'Redeemed',v:270,pct:26}];
+  el.innerHTML=data.map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;">
+    <span style="font-size:12px;font-weight:600;width:90px;color:var(--m-ink2);">${s.l}</span>
+    <div class="m-prog" style="flex:1;height:10px;"><div class="m-prog-fill" style="width:${s.pct}%;background:var(--m-grad);height:10px;"></div></div>
+    <span style="font-size:12px;font-weight:700;color:var(--m-muted);min-width:36px;text-align:right;">${s.v}</span>
+  </div>`).join('');
+}
+function renderMZoneStats(){
+  const el=document.getElementById('m-zone-stats');if(!el)return;
+  el.innerHTML=M_ZONES_DATA.map(z=>`<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--m-border);">
+    <div style="width:10px;height:10px;border-radius:50%;background:${z.c};box-shadow:0 0 8px ${z.c};flex-shrink:0;"></div>
+    <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--m-ink);">${z.n}</div><div style="font-size:11px;color:var(--m-muted);">${z.loc}</div></div>
+    <span style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:${z.c};">${z.cust}</span>
+  </div>`).join('');
+}
+function renderMZoneEntries(){
+  const el=document.getElementById('m-zone-entries');if(!el)return;
+  const entries=[{c:'Priya Reddy',z:'FreshMart',t:'09:14 AM',o:'Bakery 15%'},{c:'Meera Sharma',z:'SmartMart',t:'09:02 AM',o:'Dairy 20%'},{c:'Arjun Patel',z:'FreshMart',t:'08:47 AM',o:'Bundle 10%'},{c:'Kiran Reddy',z:'QuickShop',t:'08:31 AM',o:'Protein 25%'}];
+  el.innerHTML=entries.map(e=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--m-border);">
+    <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:var(--m-ink);">${e.c}</div><div style="font-size:11px;color:var(--m-muted);">${e.z} · ${e.t}</div></div>
+    <span class="m-badge m-badge-emerald">${e.o}</span>
+  </div>`).join('');
+}
+function renderMInvTable(){
+  const el=document.getElementById('m-inv-table');if(!el)return;
+  el.innerHTML=`<table class="m-table"><thead><tr><th>Item</th><th>Stock</th><th>vs Normal</th><th>Discount</th><th>Action</th></tr></thead><tbody>${M_INV.map(i=>`<tr><td style="font-weight:700;">${i.n}</td><td>${i.stock}</td><td style="color:${i.offer?'var(--m-amber)':'var(--m-emerald)'};font-weight:700;">${i.over}</td><td style="font-weight:800;color:${i.offer?'var(--m-emerald)':'var(--m-muted)'};">${i.offer?i.offer+'%':'—'}</td><td><span class="m-badge ${i.offer?'m-badge-emerald':'m-badge-blue'}">${i.action}</span></td></tr>`).join('')}</tbody></table>`;
+}
+
+// Toast
+function mShowToast(t,b){
+  const d=M_TOASTS[mToastIdx%M_TOASTS.length];mToastIdx++;
+  document.getElementById('m-toast-icon').textContent=t?'🔔':d.ic;
+  document.getElementById('m-toast-title').textContent=t||d.t;
+  document.getElementById('m-toast-body').textContent=b||d.b;
+  const el=document.getElementById('m-toast');
+  el.style.transform='translateX(0)';
+  clearTimeout(mToastT);mToastT=setTimeout(()=>el.style.transform='translateX(130%)',5000);
+}
+
+function toggleMDark(){
+  mDark=!mDark;
+  const r=document.documentElement.style;
+  if(mDark){r.setProperty('--m-bg','#0f172a');r.setProperty('--m-bg2','#1e293b');r.setProperty('--m-surface','#1e2d42');r.setProperty('--m-ink','#f1f5f9');r.setProperty('--m-ink2','#cbd5e1');r.setProperty('--m-muted','#94a3b8');r.setProperty('--m-border','rgba(255,255,255,0.08)');r.setProperty('--m-border2','rgba(255,255,255,0.14)');document.getElementById('m-dark-btn').textContent='☀️';}
+  else{r.setProperty('--m-bg','#f0f4ff');r.setProperty('--m-bg2','#e8edf8');r.setProperty('--m-surface','#fff');r.setProperty('--m-ink','#0f172a');r.setProperty('--m-ink2','#1e293b');r.setProperty('--m-muted','#64748b');r.setProperty('--m-border','rgba(15,23,42,0.08)');r.setProperty('--m-border2','rgba(15,23,42,0.14)');document.getElementById('m-dark-btn').textContent='🌙';}
+}
+
+// ═══════════════════════════════════════════════════════════
+// MANAGER 3D CANVASES
+// ═══════════════════════════════════════════════════════════
+function initMHeroCanvas(){
+  const canvas=document.getElementById('m-hero-canvas');if(!canvas||canvas._init)return;canvas._init=true;
+  const W=canvas.offsetWidth||900,H=180;
+  const r=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(W,H);r.setClearColor(0,0);
+  const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,W/H,.1,200);cam.position.set(0,0,28);
+  sc.add(new THREE.AmbientLight(0x0a1535,2));
+  [[8,.14,0x2563eb,.5,.3,0],[12,.1,0x7c3aed,1,-.4,1],[16,.08,0x059669,-.3,.6,2]].forEach(([rv,t,c,rx,ry,i])=>{
+    const m=new THREE.Mesh(new THREE.TorusGeometry(rv,t,8,80),new THREE.MeshPhongMaterial({color:c,emissive:c,emissiveIntensity:.5,transparent:true,opacity:.8}));
+    m.rotation.set(rx,ry,0);m.userData={i};sc.add(m);
+  });
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(3,32,32),new THREE.MeshPhongMaterial({color:0x2563eb,emissive:0x0d2d6e,emissiveIntensity:.5,shininess:120}));sc.add(orb);
+  sc.add(new THREE.Mesh(new THREE.SphereGeometry(3.1,10,10),new THREE.MeshBasicMaterial({color:0x60a5fa,wireframe:true,transparent:true,opacity:.2})));
+  const pl=new THREE.PointLight(0x2563eb,4,60);pl.position.set(8,8,8);sc.add(pl);
+  const pl2=new THREE.PointLight(0x7c3aed,3,50);pl2.position.set(-8,-6,6);sc.add(pl2);
+
+  // Particles
+  const pArr=new Float32Array(500*3);for(let i=0;i<500;i++){pArr[i*3]=(Math.random()-.5)*80;pArr[i*3+1]=(Math.random()-.5)*50;pArr[i*3+2]=(Math.random()-.5)*30-5;}
+  const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pArr,3));
+  sc.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x93c5fd,size:.25,transparent:true,opacity:.6})));
+
+  let ht=0;
+  (function anim(){requestAnimationFrame(anim);ht+=.009;
+    orb.rotation.y=ht*.6;
+    sc.children.forEach(c=>{if(c.userData&&c.userData.i!==undefined){c.rotation.y+=.007*(c.userData.i%2?1:-1);c.rotation.x+=.004;}});
+    pl.position.x=Math.cos(ht*.6)*12;pl.position.z=Math.sin(ht*.6)*12;
+    r.render(sc,cam);
+  })();
+}
+
+function initMMapCanvas(id){
+  const canvas=document.getElementById(id);if(!canvas||canvas._mapInit)return;canvas._mapInit=true;
+  let mt=0;
+  function drawMMap(){
+    const W=canvas.width=canvas.offsetWidth,H=canvas.height=canvas.offsetHeight;
+    const ctx=canvas.getContext('2d');mt+=.018;
+    ctx.fillStyle='#07111f';ctx.fillRect(0,0,W,H);
+    // Grid
+    ctx.strokeStyle='rgba(30,58,95,.5)';ctx.lineWidth=1;
+    for(let x=0;x<W;x+=W/14){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=H/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // Scan line
+    const sy=H*.42+Math.sin(mt*.4)*H*.04;
+    const sg=ctx.createLinearGradient(0,sy,W,sy);sg.addColorStop(0,'transparent');sg.addColorStop(.4,'rgba(37,99,235,.5)');sg.addColorStop(.6,'rgba(37,99,235,.5)');sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg;ctx.fillRect(0,sy-1,W,2);
+    // Bg dots
+    const rng=mulberry32(42);
+    for(let i=0;i<140;i++){const dx=rng()*W,dy=rng()*H,bob=Math.sin(mt*1.5+i*.3)*1.5;ctx.beginPath();ctx.arc(dx,dy+bob,2,0,Math.PI*2);ctx.fillStyle=`rgba(245,158,11,${.4+Math.sin(mt+i)*.25})`;ctx.fill();}
+    // Zones
+    const zones=[{x:.35,y:.5,r:.14,c:'#059669',n:'FreshMart',loc:'Jubilee Hills',cust:34},{x:.6,y:.28,r:.12,c:'#2563eb',n:'SmartMart',loc:'Banjara Hills',cust:18},{x:.2,y:.68,r:.13,c:'#d97706',n:'QuickShop',loc:'Madhapur',cust:22},{x:.72,y:.65,r:.09,c:'#dc2626',n:'MediPlus',loc:'Kondapur',cust:9},{x:.18,y:.28,r:.1,c:'#7c3aed',n:'TechZone',loc:'Gachibowli',cust:12}];
+    zones.forEach((z,zi)=>{
+      const cx=z.x*W,cy=z.y*H,br=Math.min(W,H)*z.r;
+      for(let p=0;p<2;p++){const ph=((mt*.6+zi*.4+p*.5)%1),rr=br*(.3+ph*.8);ctx.beginPath();ctx.arc(cx,cy,rr,0,Math.PI*2);ctx.strokeStyle=z.c+(Math.round((1-ph)*50).toString(16).padStart(2,'0'));ctx.lineWidth=1.5;ctx.stroke();}
+      const zg=ctx.createRadialGradient(cx,cy,0,cx,cy,br);zg.addColorStop(0,z.c+'20');zg.addColorStop(1,'transparent');
+      ctx.fillStyle=zg;ctx.beginPath();ctx.arc(cx,cy,br,0,Math.PI*2);ctx.fill();
+      // Cluster dots
+      const rng2=mulberry32(zi*100+7);
+      for(let d=0;d<z.cust;d++){const a=rng2()*Math.PI*2,r2=rng2()*br*.85,ddx=cx+Math.cos(a)*r2,ddy=cy+Math.sin(a)*r2,bob=Math.sin(mt*2+d*.4)*1;ctx.beginPath();ctx.arc(ddx,ddy+bob,2.5,0,Math.PI*2);ctx.fillStyle=`rgba(52,211,153,${.65+Math.sin(mt+d)*.25})`;ctx.fill();}
+      // Center circle
+      ctx.beginPath();ctx.arc(cx,cy,14,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fill();ctx.strokeStyle=z.c;ctx.lineWidth=2;ctx.stroke();
+      const sa=mt*2+zi;ctx.beginPath();ctx.arc(cx,cy,14,sa,sa+Math.PI*.7);ctx.strokeStyle=z.c;ctx.lineWidth=2.5;ctx.stroke();
+      // Labels
+      ctx.font='bold 12px Outfit,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(z.n,cx,cy-br*.6-6);
+      ctx.font='10px Outfit,sans-serif';ctx.fillStyle='rgba(148,163,184,.8)';ctx.fillText(z.loc,cx,cy-br*.6+9);
+      ctx.font='bold 11px Outfit,sans-serif';ctx.fillStyle=z.c;ctx.fillText(z.cust+' active',cx,cy+br*.65+12);
+    });
+    requestAnimationFrame(drawMMap);
+  }
+  drawMMap();
+}
+
+function initMNeuralCanvas(){
+  const c=document.getElementById('m-neural-canvas');if(!c||c._init)return;c._init=true;
+  const W=c.offsetWidth||900,H=200;c.width=W;c.height=H;
+  const ctx=c.getContext('2d');
+  const LAYERS=[[{x:.08,y:.3},{x:.08,y:.5},{x:.08,y:.7}],[{x:.22,y:.2},{x:.22,y:.4},{x:.22,y:.6},{x:.22,y:.8}],[{x:.38,y:.15},{x:.38,y:.35},{x:.38,y:.55},{x:.38,y:.75},{x:.38,y:.92}],[{x:.55,y:.2},{x:.55,y:.4},{x:.55,y:.6},{x:.55,y:.8}],[{x:.7,y:.25},{x:.7,y:.5},{x:.7,y:.75}],[{x:.86,y:.35},{x:.86,y:.65}]];
+  const hexC=['#60a5fa','#a78bfa','#34d399','#38bdf8'];
+  const nodes=LAYERS.flat().map((n,i)=>({x:n.x*W,y:n.y*H,r:5+Math.random()*2.5,hex:hexC[i%4],pulse:Math.random()*Math.PI*2}));
+  const edges=[];for(let l=0;l<LAYERS.length-1;l++){LAYERS[l].forEach(a=>{LAYERS[l+1].forEach(b=>{if(Math.random()>.2)edges.push({x1:a.x*W,y1:a.y*H,x2:b.x*W,y2:b.y*H,t:Math.random()*Math.PI*2,sp:.018+Math.random()*.025});});});}
+  const signals=[];setInterval(()=>{if(signals.length>24)return;const e=edges[Math.floor(Math.random()*edges.length)];signals.push({e,p:0,sp:.012+Math.random()*.018,c:hexC[Math.floor(Math.random()*4)]});},180);
+  let nt=0;(function dn(){ctx.clearRect(0,0,W,H);nt+=.016;
+    edges.forEach(e=>{e.t+=e.sp;const g=ctx.createLinearGradient(e.x1,e.y1,e.x2,e.y2);g.addColorStop(0,'rgba(37,99,235,.07)');g.addColorStop(.5+Math.sin(e.t)*.35,'rgba(124,58,237,.22)');g.addColorStop(1,'rgba(37,99,235,.07)');ctx.strokeStyle=g;ctx.lineWidth=.75;ctx.beginPath();ctx.moveTo(e.x1,e.y1);ctx.lineTo(e.x2,e.y2);ctx.stroke();});
+    for(let i=signals.length-1;i>=0;i--){const s=signals[i];s.p+=s.sp;if(s.p>=1){signals.splice(i,1);continue;}const sx=s.e.x1+(s.e.x2-s.e.x1)*s.p,sy=s.e.y1+(s.e.y2-s.e.y1)*s.p;const g=ctx.createRadialGradient(sx,sy,0,sx,sy,9);g.addColorStop(0,s.c+'cc');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,sy,9,0,Math.PI*2);ctx.fill();ctx.fillStyle=s.c;ctx.beginPath();ctx.arc(sx,sy,2.8,0,Math.PI*2);ctx.fill();}
+    nodes.forEach(n=>{n.pulse+=.04;const glow=3+Math.sin(n.pulse)*2.2,g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r+glow+5);g.addColorStop(0,n.hex+'ff');g.addColorStop(.5,n.hex+'55');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(n.x,n.y,n.r+glow+5,0,Math.PI*2);ctx.fill();ctx.fillStyle=n.hex;ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=1;ctx.stroke();});
+    requestAnimationFrame(dn);})();
+}
+function initMWaveCanvas(){
+  const c=document.getElementById('m-wave-canvas');if(!c||c._init)return;c._init=true;
+  const W=c.offsetWidth||900,H=160;c.width=W;c.height=H;const ctx=c.getContext('2d');
+  const waves=[{amp:28,freq:.012,sp:.038,ph:0,stroke:'rgba(37,99,235,0.7)',lw:2.5},{amp:20,freq:.018,sp:-.028,ph:1.2,stroke:'rgba(124,58,237,0.55)',lw:2},{amp:34,freq:.008,sp:.022,ph:2.5,stroke:'rgba(5,150,105,0.45)',lw:2},{amp:14,freq:.026,sp:.045,ph:3.8,stroke:'rgba(8,145,178,0.4)',lw:1.5}];
+  (function dw(){ctx.clearRect(0,0,W,H);waves.forEach(w=>{w.ph+=w.sp;ctx.beginPath();for(let x=0;x<=W;x+=2){const y=H*.55+Math.sin(x*w.freq+w.ph)*w.amp+Math.sin(x*w.freq*.65+w.ph*1.3)*w.amp*.45;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();const gf=ctx.createLinearGradient(0,0,0,H);gf.addColorStop(0,w.stroke.replace(/[\d.]+\)$/,'0.09)'));gf.addColorStop(1,'transparent');ctx.fillStyle=gf;ctx.fill();ctx.beginPath();for(let x=0;x<=W;x+=2){const y=H*.55+Math.sin(x*w.freq+w.ph)*w.amp+Math.sin(x*w.freq*.65+w.ph*1.3)*w.amp*.45;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle=w.stroke;ctx.lineWidth=w.lw;ctx.stroke();});requestAnimationFrame(dw);})();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOMER DATA & INIT
+// ═══════════════════════════════════════════════════════════
+const C_OFFERS=[
+  {e:'🥖',store:'FreshMart',name:'Bakery Bundle',pct:15,dist:'120m',loc:'Jubilee Hills',timer:'47 min',grad:'linear-gradient(135deg,#059669,#0891b2)'},
+  {e:'🥛',store:'SmartMart',name:'Dairy Delight',pct:20,dist:'340m',loc:'Banjara Hills',timer:'32 min',grad:'linear-gradient(135deg,#2563eb,#7c3aed)'},
+  {e:'⚡',store:'QuickShop',name:'Snack Pack',pct:25,dist:'520m',loc:'Madhapur',timer:'59 min',grad:'linear-gradient(135deg,#d97706,#dc2626)'},
+  {e:'💊',store:'MediPlus',name:'Health Bundle',pct:30,dist:'800m',loc:'Kondapur',timer:'23 min',grad:'linear-gradient(135deg,#dc2626,#7c3aed)'},
+  {e:'💻',store:'TechZone',name:'Gadget Deal',pct:12,dist:'1.2km',loc:'Gachibowli',timer:'85 min',grad:'linear-gradient(135deg,#7c3aed,#2563eb)'},
+];
+const C_FLASH=[
+  {e:'🍓',name:'Strawberries',why:'Overstocked +240%',pct:40,stock:'Only 8 left'},
+  {e:'🥭',name:'Mango Juice',why:'Overstocked +180%',pct:30,stock:'12 packs left'},
+  {e:'🍞',name:'Sourdough',why:'Overstocked +222%',pct:35,stock:'22 loaves left'},
+  {e:'🫐',name:'Blueberries',why:'Seasonal surplus',pct:25,stock:'Limited stock'},
+];
+const C_ACTS=[
+  {ic:'🎯',bg:'rgba(5,150,105,.15)',t:'Bakery Bundle redeemed',s:'FreshMart · -₹127 · +200 pts',pts:'+200',c:'#34d399'},
+  {ic:'⭐',bg:'rgba(245,158,11,.15)',t:'Loyalty bonus earned',s:'3rd visit this week!',pts:'+100',c:'#f59e0b'},
+  {ic:'🤖',bg:'rgba(59,130,246,.15)',t:'AI offer: Dairy 20% OFF',s:'Based on your purchase history',pts:'+50',c:'#60a5fa'},
+  {ic:'🎮',bg:'rgba(139,92,246,.15)',t:'Challenge completed',s:'Visited store 3× this week',pts:'+300',c:'#a78bfa'},
+];
+const C_STORES=[
+  {e:'🛒',name:'FreshMart',loc:'Jubilee Hills',dist:'120m',offers:3,c:'#059669'},
+  {e:'🏪',name:'SmartMart',loc:'Banjara Hills',dist:'340m',offers:2,c:'#2563eb'},
+  {e:'⚡',name:'QuickShop',loc:'Madhapur',dist:'520m',offers:4,c:'#d97706'},
+  {e:'💊',name:'MediPlus',loc:'Kondapur',dist:'800m',offers:1,c:'#dc2626'},
+  {e:'💻',name:'TechZone',loc:'Gachibowli',dist:'1.2km',offers:2,c:'#7c3aed'},
+];
+const C_CHALLENGES=[
+  {name:'Visit store 3×',detail:'2/3 complete',prog:67,pts:300,icon:'🏪'},
+  {name:'Spend ₹500+ in one trip',detail:'₹340/₹500',prog:68,pts:200,icon:'💳'},
+  {name:'Redeem 3 AI offers',detail:'1/3 done',prog:33,pts:500,icon:'🤖'},
+  {name:'Try a new product category',detail:'Not started',prog:0,pts:150,icon:'🆕'},
+];
+const C_LEADERBOARD=[
+  {rank:1,name:'Meera S.',pts:5240,badge:'👑'},{rank:2,name:'Priya R.',pts:2840,badge:'🥇'},
+  {rank:3,name:'Arjun P.',pts:2100,badge:'🥈'},{rank:4,name:'Kiran R.',pts:1780,badge:'🥉'},
+  {rank:5,name:'Divya N.',pts:1320,badge:''},
+];
+const C_ACHV=[
+  {e:'🌟',name:'First Purchase',c:'#f59e0b'},{e:'🔥',name:'5-Day Streak',c:'#dc2626'},
+  {e:'🛒',name:'10 Purchases',c:'#2563eb'},{e:'🤖',name:'AI Adopter',c:'#7c3aed'},
+  {e:'💎',name:'Gold Member',c:'#f59e0b'},{e:'⚡',name:'Speed Shopper',c:'#059669'},
+];
+const C_HISTORY=[
+  {store:'FreshMart',item:'Bakery Bundle 15% OFF',date:'Today 9:14 AM',amt:'₹340',pts:'+200'},
+  {store:'SmartMart',item:'Dairy Delight 20% OFF',date:'Yesterday 6:30 PM',amt:'₹520',pts:'+260'},
+  {store:'QuickShop',item:'Snack Pack 25% OFF',date:'2 days ago',amt:'₹180',pts:'+90'},
+  {store:'MediPlus',item:'Health Bundle 30% OFF',date:'3 days ago',amt:'₹420',pts:'+210'},
+];
+const C_AI_OFFERS=['Buy Coffee today → Get Cookies 20% OFF','Milk fans love Cereal too! 15% OFF Cornflakes','Your Shampoo runs out soon → Conditioner Bundle 30%','You buy Chicken often → BBQ Sauce 25% discount'];
+let cPanel='home',cAIIdx=0;
+
+function initCustomer(){
+  setTimeGreeting();
+  setTimeBanner();
+  renderCOffers();renderCFlash();renderCActivity();renderCStores();renderCChallenges();
+  renderCLeaderboard();renderCAchievements();renderCHistory();
+  setTimeout(()=>initCHeroCanvas(),200);
+  setTimeout(()=>initCMapCanvas(),300);
+  setTimeout(()=>drawCPtsRing(),400);
+  setInterval(()=>{cAIIdx=(cAIIdx+1)%C_AI_OFFERS.length;const el=document.getElementById('c-ai-offer-text');if(el){el.style.opacity='0';setTimeout(()=>{el.textContent=C_AI_OFFERS[cAIIdx];el.style.opacity='1';},300);}},6000);
+  document.getElementById('c-ai-offer-text').style.transition='opacity .3s';
+}
+function setTimeGreeting(){
+  const h=new Date().getHours(),el=document.getElementById('c-time-greeting');
+  if(el)el.textContent=h<12?'Good morning 👋':h<17?'Good afternoon 👋':'Good evening 👋';
+}
+function setTimeBanner(){
+  const h=new Date().getHours();
+  const periods=[
+    {r:[0,12],badge:'🌅 Morning',label:'Morning Special · Until 12:00 PM',offer:'☕ Coffee & Breakfast Bundle'},
+    {r:[12,17],badge:'☀️ Afternoon',label:'Lunch Deal · Until 5:00 PM',offer:'🥗 Salad & Juice Combo'},
+    {r:[17,21],badge:'🌆 Evening',label:'Evening Snack Special · Until 9 PM',offer:'🍿 Snack & Beverage Pack'},
+    {r:[21,24],badge:'🌙 Late Night',label:'Night Owl Deal · Until Midnight',offer:'🥖 Bakery Fresh Discount'},
+  ];
+  const p=periods.find(p=>h>=p.r[0]&&h<p.r[1])||periods[0];
+  const badge=document.getElementById('c-time-badge'),label=document.getElementById('c-time-label'),offer=document.getElementById('c-time-offer');
+  if(badge)badge.textContent=p.badge;if(label)label.textContent=p.label;if(offer)offer.textContent=p.offer;
+}
+function renderCOffers(){
+  const el=document.getElementById('c-offers-scroll');if(!el)return;
+  el.innerHTML=C_OFFERS.map(o=>`<div class="c-offer-card" style="background:${o.grad};" onclick="cClaimOffer()">
+    <div class="c-offer-timer">⏱ ${o.timer}</div>
+    <span class="c-offer-emoji">${o.e}</span>
+    <div class="c-offer-store">${o.store}</div>
+    <div class="c-offer-name">${o.name}</div>
+    <div class="c-offer-pct">${o.pct}<span>% OFF</span></div>
+    <div class="c-offer-dist">📍 ${o.dist} · ${o.loc}</div>
+  </div>`).join('');
+}
+function renderCFlash(){
+  const el=document.getElementById('c-flash-scroll');if(!el)return;
+  el.innerHTML=C_FLASH.map(f=>`<div class="c-flash-card" onclick="cClaimOffer()">
+    <span class="c-flash-emoji">${f.e}</span>
+    <div class="c-flash-name">${f.name}</div>
+    <div class="c-flash-reason">${f.why}</div>
+    <div class="c-flash-pct">${f.pct}%</div>
+    <div class="c-flash-stock">${f.stock}</div>
+  </div>`).join('');
+}
+function renderCActivity(){
+  const el=document.getElementById('c-activity-list');if(!el)return;
+  el.innerHTML=C_ACTS.map(a=>`<div class="c-activity-item">
+    <div class="c-act-icon" style="background:${a.bg};">${a.ic}</div>
+    <div><div class="c-act-title">${a.t}</div><div class="c-act-sub">${a.s}</div></div>
+    <div class="c-act-pts" style="color:${a.c};">${a.pts}</div>
+  </div>`).join('');
+}
+function renderCStores(){
+  const el=document.getElementById('c-store-list');if(!el)return;
+  el.innerHTML=C_STORES.map(s=>`<div class="c-store-item">
+    <div class="c-store-logo" style="background:rgba(${hexToRgb(s.c)},.15);">${s.e}</div>
+    <div><div class="c-store-name">${s.name}</div><div class="c-store-loc">📍 ${s.loc}</div></div>
+    <div><div class="c-store-dist" style="color:${s.c};">${s.dist}</div><div class="c-store-offer" style="color:${s.c};">${s.offers} offers</div></div>
+  </div>`).join('');
+}
+function renderCChallenges(){
+  const el=document.getElementById('c-challenges');if(!el)return;
+  el.innerHTML=C_CHALLENGES.map(ch=>`<div class="c-challenge">
+    <div class="c-challenge-icon">${ch.icon}</div>
+    <div class="c-challenge-info">
+      <div class="c-challenge-name">${ch.name}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:5px;">${ch.detail}</div>
+      <div class="c-challenge-prog"><div class="c-challenge-fill" style="width:${ch.prog}%;"></div></div>
+    </div>
+    <div class="c-challenge-pts">+${ch.pts} pts</div>
+  </div>`).join('');
+}
+function renderCLeaderboard(){
+  const el=document.getElementById('c-leaderboard');if(!el)return;
+  el.innerHTML=C_LEADERBOARD.map(l=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:${l.rank===2?'rgba(245,158,11,.1)':'rgba(255,255,255,.04)'};border:1px solid ${l.rank===2?'rgba(245,158,11,.2)':'rgba(255,255,255,.07)'};border-radius:12px;margin-bottom:8px;">
+    <div style="font-size:18px;width:24px;text-align:center;">${l.badge||'#'+l.rank}</div>
+    <div style="flex:1;font-size:13px;font-weight:700;color:${l.rank===2?'#f59e0b':'#fff'};">${l.name}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${l.rank===2?'#f59e0b':'var(--c-teal)'};">${l.pts.toLocaleString()}</div>
+  </div>`).join('');
+}
+function renderCAchievements(){
+  const el=document.getElementById('c-achievements');if(!el)return;
+  el.innerHTML=C_ACHV.map(a=>`<div style="flex-shrink:0;text-align:center;width:80px;">
+    <div style="width:60px;height:60px;border-radius:18px;background:rgba(${hexToRgb(a.c)},.15);border:2px solid ${a.c}44;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 6px;">${a.e}</div>
+    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);">${a.name}</div>
+  </div>`).join('');
+}
+function renderCHistory(){
+  const el=document.getElementById('c-history-list');if(!el)return;
+  el.innerHTML=C_HISTORY.map(h=>`<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+    <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#fff;">${h.store}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">${h.item}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;">${h.date}</div>
+    </div>
+    <div style="text-align:right;"><div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;">${h.amt}</div>
+      <div style="font-size:11px;color:var(--c-teal);font-weight:700;">${h.pts}</div>
+    </div>
+  </div>`).join('');
+}
+
+function setCPanel(id,el){
+  document.querySelectorAll('.c-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('c-panel-'+id).classList.add('active');
+  document.querySelectorAll('.c-nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  cPanel=id;
+  if(id==='nearby')setTimeout(()=>initCMapCanvas(),150);
+  if(id==='loyalty')setTimeout(()=>drawCPtsRing(),150);
+}
+
+function cClaimOffer(){
+  const el=document.getElementById('c-pts');if(!el)return;
+  const cur=parseInt(el.textContent.replace(/,/g,''));
+  const newPts=cur+200;
+  el.style.transition='all .4s';el.style.transform='scale(1.3)';el.style.color='#f59e0b';
+  el.textContent=newPts.toLocaleString();
+  setTimeout(()=>{el.style.transform='';el.style.color='var(--c-teal)';},600);
+}
+function drawCPtsRing(){
+  const c=document.getElementById('c-pts-ring');if(!c)return;
+  const ctx=c.getContext('2d'),cx=70,cy=70,r=58,lw=10,pct=71/100;
+  ctx.clearRect(0,0,140,140);
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,Math.PI*1.5);ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=lw;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*pct);
+  const grd=ctx.createLinearGradient(0,0,140,140);grd.addColorStop(0,'#14b8a6');grd.addColorStop(1,'#f59e0b');
+  ctx.strokeStyle=grd;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+  ctx.shadowColor='#14b8a6';ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;
+}
+
+// Customer hero 3D canvas
+function initCHeroCanvas(){
+  const canvas=document.getElementById('c-hero-canvas');if(!canvas||canvas._init)return;canvas._init=true;
+  const W=canvas.offsetWidth||390,H=300;
+  const r=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setSize(W,H);r.setClearColor(0,0);
+  const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(60,W/H,.1,200);cam.position.set(0,0,22);
+  sc.add(new THREE.AmbientLight(0x0a1628,2));
+  const pl1=new THREE.PointLight(0x14b8a6,3,50);pl1.position.set(6,6,8);sc.add(pl1);
+  const pl2=new THREE.PointLight(0x3b82f6,2,40);pl2.position.set(-6,-4,6);sc.add(pl2);
+  [[6,.12,0x14b8a6,.4,.3],[9,.1,0x3b82f6,.8,-.5],[12,.08,0x8b5cf6,-.4,.7]].forEach(([rv,t,c,rx,ry],i)=>{
+    const m=new THREE.Mesh(new THREE.TorusGeometry(rv,t,8,80),new THREE.MeshPhongMaterial({color:c,emissive:c,emissiveIntensity:.5,transparent:true,opacity:.75}));
+    m.rotation.set(rx,ry,0);m.userData={i};sc.add(m);
+  });
+  const pArr=new Float32Array(400*3);for(let i=0;i<400;i++){pArr[i*3]=(Math.random()-.5)*60;pArr[i*3+1]=(Math.random()-.5)*40;pArr[i*3+2]=(Math.random()-.5)*25-5;}
+  const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pArr,3));
+  sc.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x34d399,size:.22,transparent:true,opacity:.7})));
+  let ct=0;(function anim(){requestAnimationFrame(anim);ct+=.01;
+    sc.children.forEach(c=>{if(c.userData&&c.userData.i!==undefined){c.rotation.y+=.007*(c.userData.i%2?1:-1);c.rotation.x+=.004;}});
+    pl1.position.x=Math.cos(ct*.6)*10;pl1.position.z=Math.sin(ct*.6)*10;
+    r.render(sc,cam);})();
+}
+
+function initCMapCanvas(){
+  const c=document.getElementById('c-map-canvas');if(!c||c._mapInit)return;c._mapInit=true;
+  let mt2=0;
+  function drawCMap(){
+    const W=c.width=c.offsetWidth,H=c.height=c.offsetHeight;
+    const ctx=c.getContext('2d');mt2+=.018;
+    ctx.fillStyle='#07111f';ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(30,58,95,.4)';ctx.lineWidth=1;
+    for(let x=0;x<W;x+=W/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=H/6){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    // User location
+    const ux=W*.5,uy=H*.55;
+    ctx.beginPath();ctx.arc(ux,uy,6,0,Math.PI*2);ctx.fillStyle='#14b8a6';ctx.fill();
+    ctx.strokeStyle='rgba(20,184,166,.5)';ctx.lineWidth=2;ctx.stroke();
+    for(let ring=0;ring<3;ring++){const rPhase=(mt2*.6+ring*.4)%1;ctx.beginPath();ctx.arc(ux,uy,8+rPhase*30,0,Math.PI*2);ctx.strokeStyle=`rgba(20,184,166,${(1-rPhase)*.3})`;ctx.lineWidth=1;ctx.stroke();}
+    ctx.font='bold 10px Outfit,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText('You',ux,uy-14);
+    // Stores
+    const cStores=[{x:.35,y:.45,c:'#059669',n:'FreshMart',d:'120m'},{x:.7,y:.3,c:'#2563eb',n:'SmartMart',d:'340m'},{x:.2,y:.7,c:'#d97706',n:'QuickShop',d:'520m'}];
+    cStores.forEach(s=>{const cx=s.x*W,cy=s.y*H;
+      ctx.beginPath();ctx.moveTo(ux,uy);ctx.lineTo(cx,cy);ctx.strokeStyle=s.c+'44';ctx.lineWidth=1;ctx.setLineDash([4,6]);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.fillStyle=s.c+'33';ctx.fill();ctx.strokeStyle=s.c;ctx.lineWidth=2;ctx.stroke();
+      ctx.font='bold 11px Outfit,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(s.n,cx,cy-14);
+      ctx.font='10px Outfit,sans-serif';ctx.fillStyle=s.c;ctx.fillText(s.d,cx,cy+22);
+    });
+    requestAnimationFrame(drawCMap);
+  }
+  drawCMap();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SHARED UTILS
+// ═══════════════════════════════════════════════════════════
+function hexToRgb(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `${r},${g},${b}`;
+}
+function mulberry32(seed){
+  let s=seed*1664525+1013904223|0;
+  return function(){s=Math.imul(s^s>>>16,0x45d9f3b)|0;s=s^s>>>16;return(s>>>0)/4294967296;};
+}
+
+// Ripple on all buttons
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.m-btn,.rc-btn,.c-ai-btn,.cust-btn');
+  if(!btn)return;
+  const rp=document.createElement('span');
+  const sz=Math.max(btn.offsetWidth,btn.offsetHeight)*2;
+  rp.style.cssText=`position:absolute;width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(255,255,255,.25);transform:scale(0);animation:rippleAnim .6s linear;pointer-events:none;`;
+  const rect=btn.getBoundingClientRect();
+  rp.style.left=(e.clientX-rect.left-sz/2)+'px';rp.style.top=(e.clientY-rect.top-sz/2)+'px';
+  btn.style.position='relative';btn.style.overflow='hidden';  btn.appendChild(rp);setTimeout(()=>rp.remove(),700);
+});
+const style=document.createElement('style');
+style.textContent='@keyframes rippleAnim{to{transform:scale(4);opacity:0;}}';
+document.head.appendChild(style);
+
+// Magnetic nav hover
+document.querySelectorAll('.m-nav-item').forEach(item=>{
+  item.addEventListener('mousemove',e=>{const r=item.getBoundingClientRect();item.style.transform=`translate(${(e.clientX-r.left-r.width/2)*.12}px,${(e.clientY-r.top-r.height/2)*.12}px)`;});
+  item.addEventListener('mouseleave',()=>{item.style.transform='';});
+});
+</script>
+</body>
+</html>
